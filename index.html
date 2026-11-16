@@ -28,7 +28,7 @@
       window.addEventListener('error', function(e) {
         const root = document.getElementById('root');
         if(root && root.innerHTML === '') {
-           root.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif;"><h2>Loading Error:</h2><p>' + (e.message || 'Unknown Error') + '</p><p>Check if script.js exists in GitHub.</p></div>';
+           root.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif;"><h2>Loading Error:</h2><p>' + (e.message || 'Unknown Error') + '</p><p>Check if script.js exists in GitHub and is saved correctly.</p></div>';
         }
       });
     </script>
@@ -36,7 +36,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- Load the script -->
-    <script type="text/babel" data-presets="react" src="script.js"></script>
+    <!-- Load the script (Added data-type="module" for safe parsing) -->
+    <script type="text/babel" data-type="module" data-presets="react" src="script.js"></script>
   </body>
 </html>
