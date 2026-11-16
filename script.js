@@ -1,3 +1,4 @@
+// NO IMPORTS - Global Variables Used
 const { useEffect, useMemo, useRef, useState } = React;
 
 const firebaseConfig = {
