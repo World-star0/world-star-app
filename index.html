@@ -12,10 +12,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css" />
 
-    <!-- UMD Builds (Global Variables) -->
+    <!-- React & ReactDOM (Global Variables) -->
     <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Firebase Compat (Global Variables) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -23,7 +22,18 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
     
+    <!-- Cropper -->
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@2.3.1/dist/cropper.min.js"></script>
+
+    <!-- Babel Standalone -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 🔥 YE LINE SABSE IMPORTANT HAI: Babel ko Classic mode me chalane ke liye 🔥 -->
+    <script>
+      Babel.registerPreset('react-classic', {
+        presets: [[Babel.availablePresets['react'], { runtime: 'classic' }]]
+      });
+    </script>
 
     <script>
       window.addEventListener('error', function(e) {
@@ -37,7 +47,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- Simple Babel Script (No module, no importmap) -->
-    <script type="text/babel" data-presets="react" src="script.js"></script>
+    <!-- 🔥 DHYAN DE: Yahan data-presets="react-classic" karna hai, "react" nahi 🔥 -->
+    <script type="text/babel" data-presets="react-classic" src="script.js"></script>
   </body>
 </html>
