@@ -5,28 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>World Star Voice Room</title>
     
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- React & ReactDOM UMD -->
     <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-    <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Firebase Compat SDKs -->
+    
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
-
-    <!-- Cropper.js v2.3.1 UMD -->
+    
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@2.3.1/dist/cropper.min.js"></script>
 
     <style>
@@ -44,134 +36,59 @@
         --color-sheet: #0c0c10;
         --color-chip: #2a2a32;
       }
-
       * { box-sizing: border-box; }
-
-      html, body, #root {
-        height: 100%; width: 100%; background: var(--color-bg); color: var(--color-fg);
-        overflow: hidden; font-family: var(--font-sans); color-scheme: dark;
-      }
-
+      html, body, #root { height: 100%; width: 100%; background: var(--color-bg); color: var(--color-fg); overflow: hidden; font-family: var(--font-sans); color-scheme: dark; }
       body { display: flex; justify-content: center; }
-
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-      /* Voice Room Design */
-      .room {
-        height: 100dvh; max-height: 100dvh; width: 100%; max-width: 430px;
-        margin: 0 auto; display: flex; flex-direction: column;
-        background: var(--color-bg); overflow: hidden; position: relative;
-      }
-
-      .topbar {
-        display: flex; align-items: center; gap: 6px; padding: calc(8px + env(safe-area-inset-top)) 10px 4px;
-        flex: none; position: relative; z-index: 15;
-      }
-
-      .icon-btn {
-        width: 40px; height: 44px; display: grid; place-items: center; flex: none;
-        color: var(--color-fg); background: transparent; border: none; cursor: pointer;
-      }
+      
+      .room { height: 100dvh; max-height: 100dvh; width: 100%; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; background: var(--color-bg); overflow: hidden; position: relative; }
+      .topbar { display: flex; align-items: center; gap: 6px; padding: calc(8px + env(safe-area-inset-top)) 10px 4px; flex: none; position: relative; z-index: 15; }
+      .icon-btn { width: 40px; height: 44px; display: grid; place-items: center; flex: none; color: var(--color-fg); background: transparent; border: none; cursor: pointer; }
       .icon-btn:active { transform: scale(0.94); }
-
       .brand { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
-
-      .room-title {
-        font-size: 16px; font-weight: 800; line-height: 1.15;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-fg);
-      }
-
+      .room-title { font-size: 16px; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-fg); }
       .tools { display: flex; align-items: center; gap: 8px; flex: none; }
-
-      .count-pill {
-        padding: 5px 11px; border-radius: 999px; background: var(--color-chip);
-        font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 4px;
-        color: var(--color-fg); border: none; cursor: pointer; min-height: 32px; font-variant-numeric: tabular-nums;
-      }
+      .count-pill { padding: 5px 11px; border-radius: 999px; background: var(--color-chip); font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 4px; color: var(--color-fg); border: none; cursor: pointer; min-height: 32px; font-variant-numeric: tabular-nums; }
       .count-pill:active { transform: scale(0.96); }
-
+      
       .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
-
       .board { flex: none; padding: 10px 10px 22px; display: flex; flex-direction: column; gap: 26px; }
       .seat-row { display: flex; justify-content: center; align-items: center; gap: 22px; }
       .seat-pair { display: flex; align-items: center; gap: 8px; }
       .seat-col { position: relative; width: 60px; display: flex; flex-direction: column; align-items: center; }
-
-      .seat {
-        width: 60px; height: 60px; border-radius: 999px;
-        border: 1.5px solid color-mix(in srgb, var(--color-fg) 60%, transparent);
-        display: grid; place-items: center; position: relative; flex: none;
-        background-color: rgba(255, 255, 255, 0.03); background-size: cover; background-position: center;
-        color: var(--color-fg); cursor: pointer; padding: 0;
-      }
+      .seat { width: 60px; height: 60px; border-radius: 999px; border: 1.5px solid color-mix(in srgb, var(--color-fg) 60%, transparent); display: grid; place-items: center; position: relative; flex: none; background-color: rgba(255, 255, 255, 0.03); background-size: cover; background-position: center; color: var(--color-fg); cursor: pointer; padding: 0; }
       .seat:active { transform: scale(0.96); }
       .seat.is-live { border-color: var(--color-rose); animation: live 1.5s ease-in-out infinite; }
       .seat.is-owner { border-color: var(--color-gold); }
-
-      .you-face {
-        width: 100%; height: 100%; border-radius: inherit; display: grid; place-items: center;
-        font-weight: 800; font-size: 20px; color: var(--color-bg);
-        background: radial-gradient(circle at 40% 32%, var(--color-ice), var(--color-rose) 72%);
-      }
-
-      .seat-name {
-        margin-top: 4px; font-size: 11px; font-weight: 800; color: var(--color-fg);
-        white-space: nowrap; position: absolute; top: 62px; max-width: 74px;
-        overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #000; pointer-events: none;
-      }
-
+      .you-face { width: 100%; height: 100%; border-radius: inherit; display: grid; place-items: center; font-weight: 800; font-size: 20px; color: var(--color-bg); background: radial-gradient(circle at 40% 32%, var(--color-ice), var(--color-rose) 72%); }
+      .seat-name { margin-top: 4px; font-size: 11px; font-weight: 800; color: var(--color-fg); white-space: nowrap; position: absolute; top: 62px; max-width: 74px; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #000; pointer-events: none; }
       .pulse { width: 20px; height: 14px; flex: none; color: var(--color-fg); opacity: 0.5; }
-
-      .chat {
-        flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px 10px;
-        display: flex; flex-direction: column; gap: 8px;
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
-        mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
-      }
-
+      
+      .chat { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px 10px; display: flex; flex-direction: column; gap: 8px; -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%); }
       .line-chat { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--color-fg); word-break: break-word; }
       .line-system { display: flex; gap: 6px; align-items: flex-start; color: var(--color-soft); font-size: 13px; font-weight: 700; line-height: 1.4; }
-
+      
       .sheet-backdrop { position: absolute; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.55); display: flex; align-items: flex-end; }
-      .sheet {
-        position: absolute; left: 0; right: 0; bottom: 0; z-index: 30;
-        background: var(--color-sheet); border-top: 1px solid #333; border-radius: 18px 18px 0 0;
-        padding: 10px 14px 20px; max-height: 68%; overflow-y: auto; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.85);
-      }
-
+      .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--color-sheet); border-top: 1px solid #333; border-radius: 18px 18px 0 0; padding: 10px 14px 20px; max-height: 68%; overflow-y: auto; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.85); }
       .grabber { width: 36px; height: 4px; border-radius: 4px; background: #333; margin: 0 auto 10px; }
       .sheet-title { font-size: 16px; font-weight: 800; margin-bottom: 10px; color: var(--color-fg); }
-
+      
       .gift-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-      .gift-cell {
-        display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px;
-        border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1.5px solid transparent; cursor: pointer;
-      }
+      .gift-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1.5px solid transparent; cursor: pointer; }
       .gift-cell:active { background: rgba(255, 255, 255, 0.1); }
       .gift-cell.is-selected { border-color: var(--color-rose); background: rgba(255, 77, 154, 0.14); }
       .gift-name { font-size: 11px; font-weight: 800; color: var(--color-fg); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .gift-price { display: flex; align-items: center; gap: 3px; color: var(--color-gold); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
-
-      .dock {
-        flex: none; display: flex; align-items: center; justify-content: space-between; gap: 2px;
-        padding: 4px 8px calc(8px + env(safe-area-inset-bottom));
-        background: var(--color-bg); border-top: 1px solid rgba(255, 255, 255, 0.06); z-index: 20; width: 100%; overflow: hidden;
-      }
-      .dock-btn {
-        width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; flex: none;
-        color: var(--color-fg); background: transparent; border: none; cursor: pointer; position: relative;
-      }
+      
+      .dock { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 4px 8px calc(8px + env(safe-area-inset-bottom)); background: var(--color-bg); border-top: 1px solid rgba(255, 255, 255, 0.06); z-index: 20; width: 100%; overflow: hidden; }
+      .dock-btn { width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; flex: none; color: var(--color-fg); background: transparent; border: none; cursor: pointer; position: relative; }
       .dock-btn:active { transform: scale(0.92); }
-      .dock-input {
-        flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
-        color: var(--color-fg); font: inherit; font-size: 15px; font-weight: 800; padding: 8px 6px;
-      }
+      .dock-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--color-fg); font: inherit; font-size: 15px; font-weight: 800; padding: 8px 6px; }
       .dock-input::placeholder { color: var(--color-muted); }
 
       @keyframes live { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-rose) 28%, transparent), 0 0 16px var(--color-rose); } }
       @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
-      
       .star-official-badge { background: linear-gradient(45deg, #ffd700, #ffa500); color: #000; animation: pulse-gold 2s infinite; font-weight: 800; }
 
       @keyframes giftFloat { 0% { bottom: -100px; opacity: 0; transform: translateX(-50%) scale(0.5) rotate(0deg); } 20% { opacity: 1; transform: translateX(-50%) scale(1.2) rotate(10deg); } 80% { opacity: 1; transform: translateX(-50%) scale(1) rotate(-10deg); } 100% { bottom: 100%; opacity: 0; transform: translateX(-50%) scale(0.8) rotate(0deg); } }
@@ -200,10 +117,10 @@
   <body>
     <div id="root"></div>
 
-    <script type="text/babel" data-presets="typescript,react">
+    <!-- Yahan data-presets me se typescript hata diya hai taaki mobile browser crash na ho -->
+    <script type="text/babel" data-presets="react">
       const { useEffect, useMemo, useRef, useState } = React;
 
-      // --- FIREBASE CONFIG & INIT ---
       const firebaseConfig = {
         apiKey: 'AIzaSyC4UDj5L7f3LtBgNPaYHYuEwIz3LQRlL00',
         authDomain: 'world-star-55.firebaseapp.com',
@@ -223,7 +140,6 @@
       const rDoc = (id) => col('voiceRooms').doc(id);
       const errMsg = (e, fb = 'Unknown error') => (e instanceof Error ? e.message : fb);
 
-      // --- CONSTANTS ---
       const ADMIN_DISPLAY_ID = '461757881';
       const SEAT_SLOTS = [
         { index: 0, id: 'host', label: 'Host' },
@@ -270,7 +186,6 @@
       ];
       const QUICK_REACTIONS = ['👋 Hello!', '🔥 Vibe!', '👏 Amazing!', '😂 Haha!', '❤️ Love it!', '🎤 Sing!'];
 
-      // --- HELPERS ---
       function getGenderEmoji(gender) { if (gender === 'Female') return '♀️'; if (gender === 'Other') return '⚧️'; return '♂️'; }
       function isVisitorPassActive(visitorExpiry, now = Date.now()) { return Boolean(visitorExpiry && now < visitorExpiry); }
       function purchaseVisitorPass(params) {
@@ -374,7 +289,6 @@
         return Array.from(bySender.values()).sort((a, b) => b.guardPoints - a.guardPoints || b.totalGifts - a.totalGifts);
       }
 
-      // --- CLASSES ---
       const C_INP_SM = 'w-full bg-black border border-white/15 rounded px-2 py-1.5 text-sm outline-none';
       const C_INP_AD = 'flex-1 bg-black border border-white/15 rounded-lg px-3 py-2 text-sm text-white outline-none';
       const C_CARD_ME = 'bg-[#151d2c] rounded-2xl overflow-hidden border border-gray-800 card-shadow';
@@ -392,7 +306,6 @@
       const C_ROW_B = 'w-full flex items-center justify-between p-4 border-b border-gray-800 cursor-pointer hover:bg-white/5 transition-colors text-left min-h-[54px]';
       const C_ADM_INP = 'w-1/2 bg-black border border-white/15 rounded-lg px-3 py-2 text-sm text-white outline-none';
 
-      // --- COMPONENTS ---
       const Btn = ({ type = 'button', ...p }) => <button type={type} {...p} />;
       const CloseX = ({ onClick, label = 'Close', cls = 'text-[#9aa3c7] text-lg font-bold px-1' }) => (
         <Btn onClick={onClick} aria-label={label} className={cls}>✕</Btn>
@@ -1517,30 +1430,18 @@
           else if (!giftTargetUser && roomData?.activeMembers?.length) setGiftTargetUser(roomData.activeMembers.find((m) => m.uid !== user.uid) || roomData.activeMembers[0]);
           setSheet('gift');
         };
-
-        // BHAI KA SEND GIFT FIXED
         const sendGift = async (giftToSend) => {
           const gift = giftToSend || selectedGift;
           const target = giftTargetUser || roomData?.activeMembers?.find((m) => m.uid !== user.uid) || roomData?.activeMembers?.[0] || null;
-
           if (!gift) return notify('Select a gift first!');
           if (!target) return notify('Select a user to send the gift!');
           if (target.uid === ADMIN_DISPLAY_ID) return notify('You cannot send gifts to the Official Account.');
           if (!isAdmin && liveCoins < gift.p) return notify('Not enough coins.');
-
           try {
             const isSelfGift = target.uid === user.uid;
             const { charmsEarned, coinsEarned } = calculateGiftRewards(gift.p);
-            
-            const giftRecord = {
-              giftId: gift.id || 'custom',
-              giftName: gift.n,
-              giftIcon: gift.i,
-              giftType: gift.type || 'emoji'
-            };
-
+            const giftRecord = { giftId: gift.id || 'custom', giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji' };
             const targetRef = uDoc(target.uid);
-
             if (demoMode) {
               if (!isAdmin) {
                 const nextCoins = Math.max(0, liveCoins - gift.p);
@@ -1548,36 +1449,14 @@
                 onUpdateLocalCoins?.(nextCoins);
               }
               onDemoGiftReceived?.(target.uid, {
-                id: `dg-${Date.now()}`,
-                ...giftRecord,
-                count: 1,
-                charms: charmsEarned,
-                senderUid: user.uid,
-                senderName: userProfile.displayName,
-                senderImg: userProfile.photoURL || '',
-                createdAt: Date.now()
+                id: `dg-${Date.now()}`, ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: Date.now()
               });
             } else {
-              if (!isAdmin) {
-                await uDoc(user.uid).update({ coins: FV.increment(-gift.p) });
-              }
-              await targetRef.collection('receivedGifts').add({
-                ...giftRecord,
-                count: 1,
-                charms: charmsEarned,
-                senderUid: user.uid,
-                senderName: userProfile.displayName,
-                senderImg: userProfile.photoURL || '',
-                createdAt: FV.serverTimestamp(),
-              });
-              await targetRef.update({
-                charms: FV.increment(charmsEarned),
-                coins: FV.increment(coinsEarned)
-              });
+              if (!isAdmin) await uDoc(user.uid).update({ coins: FV.increment(-gift.p) });
+              await targetRef.collection('receivedGifts').add({ ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: FV.serverTimestamp() });
+              await targetRef.update({ charms: FV.increment(charmsEarned), coins: FV.increment(coinsEarned) });
             }
-
             await pushSystemLocal(`${userProfile.displayName} sent ${gift.n} to ${isSelfGift ? 'themselves' : target.name}. Receiver got ${charmsEarned} Charms and ${coinsEarned} Coins!`);
-            
             setSheet(null); 
             setGiftAnim(gift); 
             playGiftSound(gift.sound); 
