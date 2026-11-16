@@ -5,35 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>World Star Voice Room</title>
     
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
-    <!-- Tailwind & Custom CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css" />
 
-    <!-- React & ReactDOM (Global Variables) -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Babel Standalone (To compile JSX in browser) -->
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
     
-    <!-- Cropper.js -->
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@2.3.1/dist/cropper.min.js"></script>
+
+    <!-- Error Handler Setup -->
+    <script>
+      window.addEventListener('error', function(e) {
+        const root = document.getElementById('root');
+        if(root && root.innerHTML === '') {
+           root.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif;"><h2>Loading Error:</h2><p>' + (e.message || 'Unknown Error') + '</p><p>Check if script.js exists in GitHub.</p></div>';
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
 
-    <!-- Loading our External Script -->
+    <!-- Load the script -->
     <script type="text/babel" data-presets="react" src="script.js"></script>
   </body>
 </html>
