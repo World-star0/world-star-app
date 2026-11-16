@@ -9,10 +9,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
+    <!-- CDN changed to jsDelivr for better reliability -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -117,7 +118,15 @@
   <body>
     <div id="root"></div>
 
-    <!-- Yahan data-presets me se typescript hata diya hai taaki mobile browser crash na ho -->
+    <!-- Error display setup for Vercel -->
+    <script>
+      window.onerror = function(msg) {
+         const root = document.getElementById('root');
+         if(root) root.innerHTML = '<div style="color:white; padding:20px; font-family:sans-serif;"><h2>Script Error:</h2><p>'+msg+'</p></div>';
+         return false;
+      };
+    </script>
+
     <script type="text/babel" data-presets="react">
       const { useEffect, useMemo, useRef, useState } = React;
 
