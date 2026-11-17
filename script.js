@@ -301,36 +301,45 @@ const compressImage = (file, maxWidth = 300) => new Promise((resolve) => {
 
 const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Crop Image', onCrop, onCancel, onError }) => {
   const imgRef = useRef(null);
-  const containerRef = useRef(null);
   const cropperRef = useRef(null);
   const [imageUrl, setImageUrl] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [cropperReady, setCropperReady] = useState(false);
+
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
     setImageUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
   useEffect(() => {
-    if (!imageLoaded || !imgRef.current || !containerRef.current) return;
-    const c = new Cropper(imgRef.current, { container: containerRef.current });
-    const selection = c.getCropperSelection();
-    if (selection) { selection.aspectRatio = aspectRatio; selection.initialCoverage = 0.85; }
+    if (!imageLoaded || !imgRef.current) return;
+    
+    // Purane version ka sahi tarika
+    const c = new Cropper(imgRef.current, {
+      aspectRatio: aspectRatio,
+      viewMode: 1,
+      background: false,
+      autoCropArea: 0.85,
+    });
+    
     cropperRef.current = c;
     setCropperReady(true);
     return () => { try { c.destroy(); } catch {} };
   }, [imageLoaded, aspectRatio]);
+
   const handleCrop = async () => {
     const c = cropperRef.current;
     if (!c) return;
     try {
-      const selection = c.getCropperSelection();
-      if (!selection) { onError?.('Crop selection unavailable.'); return; }
-      const canvas = await selection.$toCanvas({ width: outputWidth, height: Math.round(outputWidth / aspectRatio) });
+      // Purane version mein aise canvas nikalte hain
+      const canvas = c.getCroppedCanvas({ width: outputWidth, height: Math.round(outputWidth / aspectRatio) });
+      if (!canvas) { onError?.('Crop selection unavailable.'); return; }
       onCrop(canvas.toDataURL('image/jpeg', 0.7));
     } catch (e) { onError?.(`Crop failed: ${errMsg(e)}`); }
   };
+
   return (
     <div className="fixed inset-0 z-[7000] bg-black flex flex-col">
       <div className="flex justify-between items-center p-4 border-b border-slate-800 shrink-0">
@@ -338,7 +347,7 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
         <h3 className="text-white font-bold text-base">{title}</h3>
         <Btn onClick={handleCrop} disabled={!cropperReady} className="bg-[var(--color-rose)] text-white px-5 py-1.5 rounded-full font-bold text-sm disabled:opacity-50">Done</Btn>
       </div>
-      <div ref={containerRef} className="flex-1 relative overflow-hidden" style={{ minHeight: 0 }}>
+      <div className="flex-1 relative overflow-hidden flex items-center justify-center" style={{ minHeight: 0 }}>
         {imageUrl && <img ref={imgRef} src={imageUrl} alt="Crop preview" onLoad={() => setImageLoaded(true)} style={{ display: 'block', maxWidth: '100%' }} />}
       </div>
       <div className="p-4 text-center text-slate-400 text-xs shrink-0">{cropperReady ? 'Pinch to zoom · Drag to move · Adjust crop box' : 'Loading...'}</div>
