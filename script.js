@@ -2119,7 +2119,9 @@ const UserProfileView = ({
         </div>
       </div>
       <div className="absolute bottom-0 w-full bg-[#ffffff] border-t border-slate-200 p-3 flex gap-2 z-50">
-        {!isMe && (
+        {isMe ? (
+          <Btn onClick={() => onNotice('Gift feature coming soon!')} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">🎁 Gift</Btn>
+        ) : (
           <>
             {!isFriend && !requestSent && <Btn onClick={sendRequest} className="flex-1 bg-blue-600 text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">➕ Add Friend</Btn>}
             {requestSent && <Btn disabled className="flex-1 bg-slate-200 text-slate-500 rounded-full py-3 font-bold min-h-[44px]">Request Sent</Btn>}
@@ -2127,36 +2129,6 @@ const UserProfileView = ({
           </>
         )}
       </div>
-      {showGiftWallModal && (
-        <SheetModal light zClass="z-[3500]" maxH="max-h-[80vh] overflow-y-auto no-scrollbar pb-8" onClose={() => setShowGiftWallModal(false)}>
-          <Grabber light />
-          <div className="flex justify-between items-center mb-4">
-            <div><h3 className="text-lg font-extrabold text-[#1a1a2e]">🎁 Gift Wall</h3><p className="text-xs text-slate-500">{totalGiftsCount} Gifts · {displayTotalCharms} Charms received</p></div>
-            <Btn onClick={() => setShowGiftWallModal(false)} className="text-slate-500 hover:text-[#1a1a2e] text-2xl font-bold px-2">×</Btn>
-          </div>
-          {groupedGifts.length === 0 ? <p className="text-center text-slate-500 text-sm py-8">No gifts received yet.</p> : (
-            <div className="grid grid-cols-2 gap-3">
-              {groupedGifts.map((group) => (
-                <div key={group.key} className="bg-[#f8f9fa] border border-slate-200 rounded-2xl p-3 flex flex-col justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl shrink-0">{group.giftType === 'image' ? <img src={group.giftIcon} alt={group.giftName} className="w-8 h-8 object-contain" /> : group.giftIcon}</span>
-                    <div className="min-w-0">
-                      <p className="font-extrabold text-sm text-[#1a1a2e] truncate">{group.giftName} × {group.totalCount}</p>
-                      <p className="text-[11px] font-semibold text-amber-600 tabular-nums">+{group.totalCharms} Charms</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200 overflow-x-auto no-scrollbar">
-                    <span className="text-[10px] font-semibold text-slate-500 shrink-0">From:</span>
-                    {group.senders.map((sender) => (
-                      <Btn key={sender.uid} title={`Open ${sender.name}'s profile`} aria-label={`Open ${sender.name}'s profile`} onClick={() => openSenderProfile(sender)} className="relative shrink-0 rounded-full hover:scale-105 transition-transform">
-                        <UserAvatar src={sender.img} name={sender.name} className="w-7 h-7 rounded-full border border-slate-300" />
-                      </Btn>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </SheetModal>
       )}
       {showAllGuardsModal && (
