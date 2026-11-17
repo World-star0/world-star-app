@@ -107,13 +107,12 @@ function removeMemberOnLeave(activeMembers, leavingUserId, currentOwnerId) {
   }
   return { nextMembers: remaining, shouldDeleteRoom: false };
 }
-function pruneStaleMembers(activeMembers, ownerId, maxAgeMs = 90 * 1000) {
+function pruneStaleMembers(activeMembers, ownerId, maxAgeMs = 120 * 1000) {
   const now = Date.now();
   const alive = (activeMembers || []).filter((m) => {
-    const ls = typeof m.lastSeen === 'number' ? m.lastSeen : 0;
-    // Keep if lastSeen is recent OR if no lastSeen (old data) and owner
-    if (!ls) return m.uid === ownerId; // keep owner if no timestamp
-    return (now - ls) <= maxAgeMs;
+    // Members without lastSeen are kept (legacy data / just joined)
+    if (typeof m.lastSeen !== 'number' || !m.lastSeen) return true;
+    return (now - m.lastSeen) <= maxAgeMs;
   });
   if (alive.length === (activeMembers || []).length) return { changed: false, nextMembers: activeMembers || [] };
   if (alive.length === 0) return { changed: true, nextMembers: [], shouldDeleteRoom: true };
@@ -639,42 +638,72 @@ const TitlesAdminPanel = ({ onNotice }) => {
 
   const removeTitle = (id) => saveCatalog(catalog.filter((t) => t.id !== id));
 
+  const findUserByDisplayId = async (rawId) => {
+    const id = String(rawId || '').trim();
+    if (!id) return null;
+    // Try string match first
+    let snap = await db.collection('users').where('displayId', '==', id).limit(1).get();
+    if (!snap.empty) return snap.docs[0];
+    // Try number match (some older docs store displayId as number)
+    if (/^\d+$/.test(id)) {
+      snap = await db.collection('users').where('displayId', '==', Number(id)).limit(1).get();
+      if (!snap.empty) return snap.docs[0];
+    }
+    return null;
+  };
+
   const grantTitle = async () => {
-    if (!grantId.trim() || !selectedTitleId) return onNotice('Select title and enter user Display ID');
+    if (!grantId.trim()) return onNotice('Enter user Display ID');
+    if (!selectedTitleId) return onNotice('Select a title from catalog first');
+    if (!catalog.length) return onNotice('Catalog empty — create a title first');
     setLoading(true);
     try {
-      const snap = await db.collection('users').where('displayId', '==', grantId.trim()).limit(1).get();
-      if (snap.empty) { onNotice('User not found'); setLoading(false); return; }
-      const userDoc = snap.docs[0];
-      const data = userDoc.data();
+      const userDoc = await findUserByDisplayId(grantId);
+      if (!userDoc) { onNotice('User not found with that ID'); setLoading(false); return; }
+      const data = userDoc.data() || {};
       const tpl = catalog.find((t) => t.id === selectedTitleId);
       if (!tpl) { onNotice('Title not found in catalog'); setLoading(false); return; }
       const dur = TITLE_DURATIONS.find((d) => d.id === durationId) || TITLE_DURATIONS[2];
       const expiresAt = dur.ms === 0 ? null : Date.now() + dur.ms;
       const existing = Array.isArray(data.titles) ? data.titles : [];
-      // Remove same title id if already present
       const filtered = existing.filter((t) => t.id !== tpl.id);
-      const granted = { id: tpl.id, text: tpl.text, emoji: tpl.emoji, img: tpl.img, glow: tpl.glow, equipped: true, expiresAt, grantedAt: Date.now() };
+      const granted = {
+        id: tpl.id,
+        text: tpl.text,
+        name: tpl.text,
+        emoji: tpl.emoji || '',
+        img: tpl.img || '',
+        glow: !!tpl.glow,
+        equipped: true,
+        expiresAt,
+        grantedAt: Date.now()
+      };
       await uDoc(userDoc.id).update({ titles: [...filtered, granted] });
-      onNotice(`Title "${tpl.text}" granted to ${data.displayName || grantId} (${dur.label})`);
+      onNotice(`✅ Title "${tpl.text}" granted to ${data.displayName || grantId} (${dur.label})`);
       setGrantId('');
-    } catch (e) { onNotice(`Grant failed: ${errMsg(e)}`); }
+    } catch (e) {
+      onNotice(`Grant failed: ${errMsg(e)}`);
+      console.error('grantTitle error', e);
+    }
     setLoading(false);
   };
 
   const revokeTitle = async () => {
-    if (!grantId.trim() || !selectedTitleId) return onNotice('Select title and enter user Display ID');
+    if (!grantId.trim()) return onNotice('Enter user Display ID');
+    if (!selectedTitleId) return onNotice('Select a title from catalog first');
     setLoading(true);
     try {
-      const snap = await db.collection('users').where('displayId', '==', grantId.trim()).limit(1).get();
-      if (snap.empty) { onNotice('User not found'); setLoading(false); return; }
-      const userDoc = snap.docs[0];
-      const data = userDoc.data();
+      const userDoc = await findUserByDisplayId(grantId);
+      if (!userDoc) { onNotice('User not found with that ID'); setLoading(false); return; }
+      const data = userDoc.data() || {};
       const existing = Array.isArray(data.titles) ? data.titles : [];
       const next = existing.filter((t) => t.id !== selectedTitleId);
       await uDoc(userDoc.id).update({ titles: next });
       onNotice('Title revoked from user');
-    } catch (e) { onNotice(`Revoke failed: ${errMsg(e)}`); }
+    } catch (e) {
+      onNotice(`Revoke failed: ${errMsg(e)}`);
+      console.error('revokeTitle error', e);
+    }
     setLoading(false);
   };
 
@@ -1492,41 +1521,74 @@ const RoomInterface = ({
   }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]); // FIX: Removed onLeave from deps
 
   // Heartbeat + auto-remove offline/stale members from room
+  // Uses transaction so seat changes are never overwritten by a stale heartbeat
   useEffect(() => {
     if (demoMode || !roomId || !user?.uid) return;
     const roomRef = rDoc(roomId);
-    const STALE_MS = 90 * 1000; // 90 seconds
-    const BEAT_MS = 25 * 1000;  // refresh every 25s
+    const STALE_MS = 120 * 1000;
+    const BEAT_MS = 30 * 1000;
+    let beatCount = 0;
 
     const heartbeat = async () => {
       try {
-        const doc = await roomRef.get();
-        if (!doc.exists) return;
-        const data = doc.data() || {};
-        let members = data.activeMembers || [];
-        // Update my lastSeen
-        members = members.map((m) => (m.uid === user.uid ? { ...m, lastSeen: Date.now(), name: userProfile.displayName, img: userProfile.photoURL } : m));
-        // Prune stale
-        const pruned = pruneStaleMembers(members, data.ownerId, STALE_MS);
-        if (pruned.changed || true) { // always write own lastSeen
-          const updates = { activeMembers: pruned.nextMembers };
-          if (pruned.nextOwner) {
-            updates.ownerId = pruned.nextOwner.uid;
-            updates.ownerName = pruned.nextOwner.name;
-            updates.ownerImg = pruned.nextOwner.img;
+        await db.runTransaction(async (tx) => {
+          const doc = await tx.get(roomRef);
+          if (!doc.exists) return;
+          const data = doc.data() || {};
+          let members = data.activeMembers || [];
+          const now = Date.now();
+
+          // Update only MY lastSeen / name / img — keep seatIndex exactly as is
+          const meIdx = members.findIndex((m) => m.uid === user.uid);
+          if (meIdx >= 0) {
+            members = members.map((m, i) =>
+              i === meIdx
+                ? { ...m, lastSeen: now, name: userProfile.displayName || m.name, img: userProfile.photoURL || m.img }
+                : m
+            );
+          } else {
+            // Not in list somehow — rejoin without taking a seat
+            members = [...members, {
+              uid: user.uid,
+              name: userProfile.displayName,
+              img: userProfile.photoURL,
+              seatIndex: null,
+              lastSeen: now
+            }];
           }
-          if (pruned.shouldDeleteRoom) {
-            await roomRef.delete();
+
+          // Prune only every 2nd beat to reduce write frequency
+          beatCount += 1;
+          let nextMembers = members;
+          let nextOwner = null;
+          let shouldDelete = false;
+          if (beatCount % 2 === 0) {
+            const pruned = pruneStaleMembers(members, data.ownerId, STALE_MS);
+            nextMembers = pruned.nextMembers;
+            nextOwner = pruned.nextOwner || null;
+            shouldDelete = pruned.shouldDeleteRoom || false;
+          }
+
+          if (shouldDelete) {
+            tx.delete(roomRef);
             return;
           }
-          await roomRef.update(updates);
-        }
-      } catch (e) { /* ignore transient errors */ }
+
+          const updates = { activeMembers: nextMembers };
+          if (nextOwner) {
+            updates.ownerId = nextOwner.uid;
+            updates.ownerName = nextOwner.name;
+            updates.ownerImg = nextOwner.img;
+          }
+          tx.update(roomRef, updates);
+        });
+      } catch (e) { /* ignore transient / contention errors */ }
     };
 
-    heartbeat(); // run immediately
     const id = setInterval(heartbeat, BEAT_MS);
-    return () => clearInterval(id);
+    // First beat after 5s so join + seat take are not raced
+    const first = setTimeout(heartbeat, 5000);
+    return () => { clearInterval(id); clearTimeout(first); };
   }, [demoMode, roomId, user?.uid, userProfile?.displayName, userProfile?.photoURL]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages]);
@@ -1538,17 +1600,69 @@ const RoomInterface = ({
   const handleSeatClick = async (seatIndex, seatedUser) => {
     if (!roomData) return;
     if (seatedUser) { setSelectedUser(seatedUser); setSheet('profile'); return; }
-    if (myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined) { notify('You are already seated! Lift up from your seat first.'); return; }
-    const updatedMembers = assignSeatToMember(roomData.activeMembers || [], user.uid, seatIndex);
-    if (demoMode) { setRoomData({ ...roomData, activeMembers: updatedMembers }); return; }
-    await rDoc(roomId).update({ activeMembers: updatedMembers });
+    if (myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined) {
+      notify('You are already seated! Lift up from your seat first.');
+      return;
+    }
+    if (demoMode) {
+      const updatedMembers = assignSeatToMember(roomData.activeMembers || [], user.uid, seatIndex);
+      setRoomData({ ...roomData, activeMembers: updatedMembers });
+      return;
+    }
+    try {
+      const roomRef = rDoc(roomId);
+      await db.runTransaction(async (tx) => {
+        const doc = await tx.get(roomRef);
+        if (!doc.exists) return;
+        const data = doc.data() || {};
+        let members = data.activeMembers || [];
+        // Ensure I am in the member list
+        if (!members.some((m) => m.uid === user.uid)) {
+          members = [...members, {
+            uid: user.uid,
+            name: userProfile.displayName,
+            img: userProfile.photoURL,
+            seatIndex: null,
+            lastSeen: Date.now()
+          }];
+        }
+        // Seat already taken?
+        if (members.some((m) => m.seatIndex === seatIndex && m.uid !== user.uid)) {
+          notify('This seat is already taken.');
+          return;
+        }
+        // Already seated?
+        const me = members.find((m) => m.uid === user.uid);
+        if (me && me.seatIndex !== null && me.seatIndex !== undefined) {
+          notify('You are already seated! Lift up first.');
+          return;
+        }
+        const updated = assignSeatToMember(members, user.uid, seatIndex);
+        tx.update(roomRef, { activeMembers: updated });
+      });
+    } catch (e) {
+      notify(`Could not take seat: ${errMsg(e)}`);
+    }
   };
   const liftUpSeat = async (uid) => {
     if (!roomData) return;
-    const updatedMembers = liftMemberFromSeat(roomData.activeMembers || [], uid);
     setSheet(null);
-    if (demoMode) { setRoomData({ ...roomData, activeMembers: updatedMembers }); return; }
-    await rDoc(roomId).update({ activeMembers: updatedMembers });
+    if (demoMode) {
+      const updatedMembers = liftMemberFromSeat(roomData.activeMembers || [], uid);
+      setRoomData({ ...roomData, activeMembers: updatedMembers });
+      return;
+    }
+    try {
+      const roomRef = rDoc(roomId);
+      await db.runTransaction(async (tx) => {
+        const doc = await tx.get(roomRef);
+        if (!doc.exists) return;
+        const members = doc.data()?.activeMembers || [];
+        tx.update(roomRef, { activeMembers: liftMemberFromSeat(members, uid) });
+      });
+    } catch (e) {
+      notify(`Could not leave seat: ${errMsg(e)}`);
+    }
   };
   const kickUser = async (uid) => {
     if (!roomData) return;
@@ -2208,8 +2322,9 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
                     </div>
                   </div>
                   <Btn onClick={async () => {
-                    const next = userTitles.map((x, i) => i === idx ? { ...x, equipped: x.equipped === false ? true : false } : x);
-                    await persistProfilePatch({ titles: next }, next[idx].equipped === false ? 'Title equipped!' : 'Title unequipped');
+                    const wasEquipped = t.equipped !== false;
+                    const next = userTitles.map((x, i) => i === idx ? { ...x, equipped: !wasEquipped } : x);
+                    await persistProfilePatch({ titles: next }, wasEquipped ? 'Title unequipped' : 'Title equipped!');
                   }} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${t.equipped !== false ? 'bg-[var(--color-rose)] text-white' : 'bg-slate-700 text-slate-300'}`}>
                     {t.equipped !== false ? 'Equipped' : 'Equip'}
                   </Btn>
