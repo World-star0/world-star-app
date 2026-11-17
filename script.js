@@ -1112,7 +1112,7 @@ const MicSeat = ({ label, seatedUser, isMine, isOwnerSeat, isLive, isMutedInRoom
     <div className="seat-col">
       <Btn aria-label={seatedUser ? `${displayName} on ${label}` : `Take ${label}`} className={`seat ${isLive ? 'is-live' : ''} ${isOwnerSeat && !isLive ? 'is-owner' : ''}`} onClick={onTake} onMouseDown={seatedUser ? onLongPressStart : undefined} onMouseUp={onLongPressEnd} onMouseLeave={onLongPressEnd} onTouchStart={seatedUser ? onLongPressStart : undefined} onTouchEnd={onLongPressEnd}>
         {seatedUser ? (showImg ? <img src={seatedUser.img} alt={displayName || 'Speaker'} referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full rounded-full object-cover" /> : <span className="you-face">{(seatedUser.name || 'Y').charAt(0).toUpperCase()}</span>) : <PlusIcon />}
-        {seatedUser && isOwnerSeat && <span aria-hidden="true" className="absolute -top-2 -left-1 text-xs leading-none drop-shadow" title="Room Owner">👑</span>}
+        {seatedUser && isOwnerSeat && <span aria-hidden="true" className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs leading-none drop-shadow" title="Room Owner">👑</span>}
         {seatedUser && isMutedInRoom && <span aria-label="Muted" className="absolute -top-1 -right-1 text-[10px] bg-[#ff2a45] text-white rounded-full px-1 py-0.5 leading-none shadow">🔇</span>}
       </Btn>
       {seatedUser && <div className="seat-name">{displayName}</div>}
@@ -1463,7 +1463,7 @@ const RoomInterface = ({
                     </div>
                   ) : (
                     <div className="w-full flex flex-col gap-2 mt-2">
-                      {isSeated && <Btn className="w-full bg-amber-600 py-2.5 rounded-lg text-white font-bold text-sm" onClick={() => liftUpSeat(user.uid)}>Lift Up (Leave Mic)</Btn>}
+                      {isSeated && selectedUser.uid !== roomData.ownerId && <Btn className="w-full bg-amber-600 py-2.5 rounded-lg text-white font-bold text-sm" onClick={() => liftUpSeat(user.uid)}>Lift Up (Leave Mic)</Btn>}
                       <Btn className="w-full bg-[#2a2a32] py-2.5 rounded-lg text-white font-bold text-sm" onClick={() => { setSheet(null); onViewProfile(selectedUser); }}>View Profile</Btn>
                     </div>
                   )}
