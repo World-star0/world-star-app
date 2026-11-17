@@ -1200,6 +1200,10 @@ const RoomInterface = ({
   const isSeated = Boolean(myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined);
   const notify = (msg) => { setToast(msg); setTimeout(() => setToast((prev) => (prev === msg ? null : prev)), 2600); };
 
+  // FIX: Use a ref for onLeave to prevent re-triggering the effect on every render
+  const onLeaveRef = useRef(onLeave);
+  useEffect(() => { onLeaveRef.current = onLeave; }, [onLeave]);
+
   useEffect(() => { setLiveCoins(Number(userProfile.coins) || 0); }, [userProfile.coins]);
   useEffect(() => {
     let active = true;
@@ -1253,10 +1257,10 @@ const RoomInterface = ({
       try {
         const doc = await roomRef.get();
         if (!active) return;
-        if (!doc.exists) { onLeave(); return; }
+        if (!doc.exists) { onLeaveRef.current(); return; }
         const data = doc.data();
         const access = checkRoomEntryAccess(data, user.uid);
-        if (!access.allowed) { notify(access.reason || 'Access denied'); setTimeout(onLeave, 900); return; }
+        if (!access.allowed) { notify(access.reason || 'Access denied'); setTimeout(onLeaveRef.current, 900); return; }
         const updatedMembers = joinMemberToRoom(data.activeMembers || [], { uid: user.uid, name: userProfile.displayName, img: userProfile.photoURL }, data.ownerId);
         const updates = { activeMembers: updatedMembers, [`kicked.${user.uid}`]: FV.delete() };
         if (!data.ownerId) { updates.ownerId = user.uid; updates.ownerName = userProfile.displayName; updates.ownerImg = userProfile.photoURL; }
@@ -1265,9 +1269,9 @@ const RoomInterface = ({
       } catch (err) { console.error('Error joining room:', err); }
     })();
     const unsubRoom = roomRef.onSnapshot((doc) => {
-      if (!doc.exists) { onLeave(); return; }
+      if (!doc.exists) { onLeaveRef.current(); return; }
       const data = { id: doc.id, ...doc.data() };
-      if (data.blocked && data.blocked.includes(user.uid)) { onLeave(); return; }
+      if (data.blocked && data.blocked.includes(user.uid)) { onLeaveRef.current(); return; }
       setRoomData(data);
       if (data.announcement) setAnnouncementText(data.announcement);
       
@@ -1296,7 +1300,8 @@ const RoomInterface = ({
         }).catch(() => {});
       }
     };
-  }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL, onLeave]);
+  }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]); // FIX: Removed onLeave from deps
+
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages]);
 
   const pushSystemLocal = async (text) => {
@@ -2010,15 +2015,15 @@ const UserProfileView = ({
   }, [demoMode, demoReceivedGifts, demoUsersMap, targetUser]);
 
   useEffect(() => {
-    if (demoMode || isMe || !currentUser) return;
+    if (demoMode || isMe || !currentUser?.uid || !targetUser?.uid || targetUser.uid === currentUser.uid) return;
     db.collection('profileViews').add({
       visitedUid: targetUser.uid,
       visitorUid: currentUser.uid,
-      visitorName: currentProfile.displayName,
+      visitorName: currentProfile.displayName || 'User',
       visitorImg: currentProfile.photoURL || '',
       timestamp: FV.serverTimestamp()
     }).catch(e => console.log(e));
-  }, [targetUser.uid, currentUser?.uid, demoMode, isMe]);
+  }, [targetUser?.uid, currentUser?.uid, demoMode, isMe, currentProfile?.displayName, currentProfile?.photoURL]);
 
   if (loading) return <div className="h-full flex items-center justify-center bg-[#ffffff] text-[#1a1a2e] font-bold">Loading Profile...</div>;
   const user = fullUserData;
