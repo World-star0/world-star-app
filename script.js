@@ -157,10 +157,10 @@ function groupReceivedGifts(records) {
   }
   return Array.from(map.values()).sort((a, b) => b.totalCharms - a.totalCharms || b.totalCount - a.totalCount);
 }
-function computeGuardList(records) {
+function computeGuardList(records, profileUid) {
   const bySender = new Map();
   for (const rec of records) {
-    if (!rec.senderUid) continue;
+    if (!rec.senderUid || rec.senderUid === profileUid) continue;
     const charms = Math.max(0, Number(rec.charms) || 0), count = Math.max(1, Number(rec.count) || 1);
     const ex = bySender.get(rec.senderUid);
     if (ex) { ex.guardPoints += charms; ex.totalGifts += count; if (!ex.img && rec.senderImg) ex.img = rec.senderImg; }
@@ -1932,7 +1932,7 @@ const UserProfileView = ({
   const targetCountry = user.country || COUNTRIES[0];
   const online = isUserOnline(user);
   const groupedGifts = groupReceivedGifts(receivedGifts);
-  const guardList = computeGuardList(receivedGifts);
+  const guardList = computeGuardList(receivedGifts, user.uid);
   const totalGiftsCount = receivedGifts.reduce((sum, g) => sum + (Number(g.count) || 1), 0);
   const totalCharmsFromGifts = receivedGifts.reduce((sum, g) => sum + (Number(g.charms) || 0), 0);
   const displayTotalCharms = Math.max(Number(user.charms) || 0, totalCharmsFromGifts);
