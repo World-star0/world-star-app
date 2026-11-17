@@ -316,12 +316,19 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
   useEffect(() => {
     if (!imageLoaded || !imgRef.current) return;
     
-    // Purane version ka sahi tarika
+    // Purane version (v1) ka sahi syntax
     const c = new Cropper(imgRef.current, {
       aspectRatio: aspectRatio,
       viewMode: 1,
-      background: false,
+      dragMode: 'move',
       autoCropArea: 0.85,
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      toggleDragModeOnDblclick: false,
     });
     
     cropperRef.current = c;
@@ -333,13 +340,41 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
     const c = cropperRef.current;
     if (!c) return;
     try {
-      // Purane version mein aise canvas nikalte hain
-      const canvas = c.getCroppedCanvas({ width: outputWidth, height: Math.round(outputWidth / aspectRatio) });
+      // Purane version mein aise crop nikalte hain
+      const canvas = c.getCroppedCanvas({ 
+        width: outputWidth, 
+        height: Math.round(outputWidth / aspectRatio) 
+      });
       if (!canvas) { onError?.('Crop selection unavailable.'); return; }
       onCrop(canvas.toDataURL('image/jpeg', 0.7));
     } catch (e) { onError?.(`Crop failed: ${errMsg(e)}`); }
   };
 
+  return (
+    <div className="fixed inset-0 z-[7000] bg-black flex flex-col">
+      <div className="flex justify-between items-center p-4 border-b border-slate-800 shrink-0">
+        <Btn onClick={onCancel} aria-label="Cancel crop" className="text-white text-2xl font-bold px-2">✕</Btn>
+        <h3 className="text-white font-bold text-base">{title}</h3>
+        <Btn onClick={handleCrop} disabled={!cropperReady} className="bg-[var(--color-rose)] text-white px-5 py-1.5 rounded-full font-bold text-sm disabled:opacity-50">Done</Btn>
+      </div>
+      
+      {/* Image Container jisme image screen ke andar rahegi */}
+      <div className="flex-1 w-full relative bg-black overflow-hidden flex items-center justify-center" style={{ minHeight: 0 }}>
+        {imageUrl && (
+          <img 
+            ref={imgRef} 
+            src={imageUrl} 
+            alt="Crop preview" 
+            onLoad={() => setImageLoaded(true)} 
+            style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }} 
+          />
+        )}
+      </div>
+      
+      <div className="p-4 text-center text-slate-400 text-xs shrink-0">{cropperReady ? 'Pinch to zoom · Drag to move' : 'Loading...'}</div>
+    </div>
+  );
+};
   return (
     <div className="fixed inset-0 z-[7000] bg-black flex flex-col">
       <div className="flex justify-between items-center p-4 border-b border-slate-800 shrink-0">
