@@ -60,10 +60,6 @@ const VISITOR_PLANS = [
   { days: 7, price: 900, label: '7 Days Pass', subtitle: '1,166 Coins', badge: 'POPULAR' },
   { days: 30, price: 3750, label: '30 Days Pass', subtitle: '5,000 Coins', badge: 'BEST VALUE (25% OFF)' },
 ];
-const SAMPLE_VISITORS = [
-  { name: 'Sonia', time: '2 mins ago', isOnline: true },
-  { name: 'Rahul', time: '1 hour ago', isOnline: false },
-];
 const QUICK_REACTIONS = ['👋 Hello!', '🔥 Vibe!', '👏 Amazing!', '😂 Haha!', '❤️ Love it!', '🎤 Sing!'];
 
 function getGenderEmoji(gender) { if (gender === 'Female') return '♀️'; if (gender === 'Other') return '⚧️'; return '♂️'; }
@@ -177,9 +173,9 @@ const C_MOD_OVL = 'fixed inset-0 bg-black/80 z-50 flex items-center justify-cent
 const C_BTN_D = 'flex-1 bg-[#2a2a32] text-white py-2.5 rounded-xl font-bold text-sm';
 const C_BTN_P = 'flex-1 bg-[#ff4d9a] text-white py-2.5 rounded-xl font-bold text-sm';
 const C_BTN_S = 'flex-1 bg-slate-800 text-white py-2 rounded-xl font-bold text-sm';
-const C_FORM_SCR = 'fixed inset-0 bg-[#000000] text-white flex flex-col max-w-[430px] mx-auto z-50';
+const C_FORM_SCR = 'fixed inset-0 bg-[#000000] text-white flex flex-col max-w-[430px] mx-auto z-50 relative';
 const C_FORM_HDR = 'flex items-center justify-center p-5 relative border-b border-white/10 shrink-0';
-const C_FORM_FTR = 'p-4 bg-[#000000] border-t border-white/10 shrink-0 w-full mt-auto';
+const C_FORM_FTR = 'absolute bottom-0 left-0 right-0 p-4 bg-[#000000] border-t border-white/10 z-10';
 const C_LBL_XS = 'text-[10px] text-slate-400';
 const C_BLK_INP = 'w-full bg-[#0b1120] text-white border border-gray-700 rounded-xl p-3 outline-none focus:border-pink-500';
 const C_SH_BLK = 'w-full bg-black/60 text-white p-3 rounded-xl border border-[#333] outline-none mb-3 text-sm';
@@ -814,7 +810,7 @@ const CreateRoomForm = ({ user, userProfile, onClose, onAdvanced, onJoin, onNoti
         <Btn onClick={onClose} aria-label="Close create room" className="absolute left-5 text-2xl text-slate-400 hover:text-white transition">✕</Btn>
         <h1 className="text-lg font-bold text-white">Create Voice Room</h1>
       </div>
-      <div className="p-5 flex-1 overflow-y-auto pb-24">
+      <div className="p-5 flex-1 overflow-y-auto pb-28">
         <input type="text" placeholder="Enter room title" maxLength={25} className="w-full bg-[#0c0c10] border border-white/15 rounded-xl p-4 text-white outline-none focus:border-blue-500 mb-6" value={title} onChange={(e) => setTitle(e.target.value)} />
         <div className="flex justify-between items-center mb-2">
           <span className="text-white font-medium">Password Lock</span>
@@ -882,7 +878,7 @@ const AdvancedRoomForm = ({ user, userProfile, onClose, onJoin, onNotice }) => {
         <Btn onClick={onClose} aria-label="Close advanced room" className="absolute left-5 text-2xl text-slate-400 hover:text-white transition">✕</Btn>
         <h1 className="text-lg font-bold text-yellow-500">Advanced Room</h1>
       </div>
-      <div className="p-5 flex-1 overflow-y-auto pb-24">
+      <div className="p-5 flex-1 overflow-y-auto pb-28">
         <div className="text-sm font-bold text-white mb-3">Select Room ID (Permanent)</div>
         <div className="grid grid-cols-3 gap-2 mb-6">
           {ids.map((id) => (
@@ -1056,6 +1052,7 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState(null);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const online = isUserOnline(otherUser);
@@ -1086,6 +1083,15 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
     } catch { onNotice('Error uploading image.'); }
     setUploading(false);
   };
+  const handleRecall = async () => {
+    if (!selectedMsg || selectedMsg.senderId !== user.uid) return;
+    if (demoMode) { setMessages(prev => prev.filter(m => m.id !== selectedMsg.id)); setSelectedMsg(null); return; }
+    try {
+      await db.collection('chats').doc(chatId).collection('messages').doc(selectedMsg.id).delete();
+      setSelectedMsg(null);
+      onNotice('Message recalled.');
+    } catch(e) { onNotice('Failed to recall.'); }
+  };
   return (
     <div className="fixed inset-0 z-[2000] flex flex-col bg-[#000000] text-white max-w-[430px] mx-auto">
       <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-[#0c0c10] shrink-0 shadow-md">
@@ -1105,8 +1111,8 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
         {messages.map((m) => {
           const isMe = m.senderId === user.uid;
           return (
-            <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] p-1.5 text-[15px] shadow-md ${isMe ? 'bg-[#ff4d9a] text-white rounded-2xl rounded-br-sm' : 'bg-[#1a1a22] text-slate-200 rounded-2xl rounded-bl-sm border border-white/10'}`}>
+            <div key={m.id} onClick={() => setSelectedMsg(m)} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[75%] p-1.5 text-[15px] shadow-md cursor-pointer ${isMe ? 'bg-[#ff4d9a] text-white rounded-2xl rounded-br-sm' : 'bg-[#1a1a22] text-slate-200 rounded-2xl rounded-bl-sm border border-white/10'}`}>
                 {m.type === 'image' ? <img src={m.image} alt="Shared" className="rounded-xl max-h-60 object-cover" /> : <span className="px-2 py-1 block">{m.text}</span>}
               </div>
             </div>
@@ -1123,6 +1129,19 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
           <input className="flex-1 bg-black border border-white/15 rounded-full px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[var(--color-rose)]" placeholder={uploading ? 'Uploading...' : 'Type a message...'} value={text} onChange={(e) => setText(e.target.value)} disabled={uploading} />
           <Btn type="submit" aria-label="Send message" className="bg-[var(--color-rose)] text-white w-11 h-11 rounded-full font-bold flex items-center justify-center shrink-0">➤</Btn>
         </form>
+      )}
+      {selectedMsg && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4" onClick={() => setSelectedMsg(null)}>
+          <div className="bg-[#1a1a22] rounded-2xl p-5 w-full max-w-xs border border-white/10" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold mb-4 text-center">Message Options</h3>
+            {selectedMsg.senderId === user.uid ? (
+              <Btn onClick={handleRecall} className="w-full bg-red-500 text-white py-3 rounded-xl font-bold mb-2">Recall Message</Btn>
+            ) : (
+              <p className="text-slate-400 text-center text-sm mb-4">You can only recall your own messages.</p>
+            )}
+            <Btn onClick={() => setSelectedMsg(null)} className="w-full bg-slate-700 text-white py-2 rounded-xl font-bold">Cancel</Btn>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1171,6 +1190,7 @@ const RoomInterface = ({
   const [liveCoins, setLiveCoins] = useState(Number(userProfile.coins) || 0);
   const [toast, setToast] = useState(null);
   const [joinedAt, setJoinedAt] = useState(Date.now());
+  const lastGiftIdRef = useRef(null);
   const chatEndRef = useRef(null);
   const longPressTimer = useRef(null);
   const micStreamRef = useRef(null);
@@ -1250,6 +1270,14 @@ const RoomInterface = ({
       if (data.blocked && data.blocked.includes(user.uid)) { onLeave(); return; }
       setRoomData(data);
       if (data.announcement) setAnnouncementText(data.announcement);
+      
+      // Global Gift Animation
+      if (data.latestGift && data.latestGift.animId !== lastGiftIdRef.current) {
+        lastGiftIdRef.current = data.latestGift.animId;
+        setGiftAnim(data.latestGift);
+        playGiftSound(data.latestGift.sound);
+        setTimeout(() => setGiftAnim(null), 3500);
+      }
     });
     const unsubMsg = roomRef.collection('messages').orderBy('createdAt', 'asc').onSnapshot((snap) => {
       setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -1358,16 +1386,23 @@ const RoomInterface = ({
         onDemoGiftReceived?.(target.uid, {
           id: `dg-${Date.now()}`, ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: Date.now()
         });
+        setGiftAnim(gift);
+        playGiftSound(gift.sound);
+        setTimeout(() => setGiftAnim(null), 3500);
       } else {
         if (!isAdmin) await uDoc(user.uid).update({ coins: FV.increment(-gift.p) });
         await targetRef.collection('receivedGifts').add({ ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: FV.serverTimestamp() });
         await targetRef.update({ charms: FV.increment(charmsEarned), coins: FV.increment(coinsEarned) });
+        
+        // Save latest gift to room for global animation
+        await rDoc(roomId).update({
+          latestGift: {
+            animId: Date.now(), giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji', anim: gift.anim || 'float', sound: gift.sound || '', senderName: userProfile.displayName
+          }
+        });
       }
       await pushSystemLocal(`${userProfile.displayName} sent ${gift.n} to ${isSelfGift ? 'themselves' : target.name}. Receiver got ${charmsEarned} Charms and ${coinsEarned} Coins!`);
       setSheet(null); 
-      setGiftAnim(gift); 
-      playGiftSound(gift.sound); 
-      setTimeout(() => setGiftAnim(null), 3500); 
       setSelectedGift(null);
     } catch (error) {
       notify(`Error sending gift: ${errMsg(error)}`);
@@ -1627,6 +1662,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
   const [bannerUploading, setBannerUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cropTarget, setCropTarget] = useState(null);
+  const [visitors, setVisitors] = useState([]);
   const dpInputRef = useRef(null);
   const bannerInputRef = useRef(null);
   const isSuperAdmin = userProfile?.displayId === ADMIN_DISPLAY_ID;
@@ -1636,6 +1672,14 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
   const titleBadge = userProfile?.title || TITLES[0];
   const isVisitorUnlocked = isVisitorPassActive(userProfile?.visitorExpiry);
   const showComingSoon = (label) => onNotice(`🚧 ${label} Coming Soon!`);
+
+  useEffect(() => {
+    if (!user || demoMode) return;
+    const unsub = db.collection('profileViews').where('visitedUid', '==', user.uid).orderBy('timestamp', 'desc').limit(20).onSnapshot(snap => {
+      setVisitors(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [user, demoMode]);
 
   const persistProfilePatch = async (patch, successNotice) => {
     setSaving(true);
@@ -1694,6 +1738,9 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
     setActiveSheet(null); setTempInput('');
   };
 
+  const recentCount = visitors.filter(v => Date.now() - (v.timestamp?.toMillis() || 0) < 86400000).length;
+  const totalCount = visitors.length;
+
   return (
     <div className="w-full h-full bg-[#0b1120] text-white flex flex-col relative overflow-hidden">
       <input type="file" accept="image/*" ref={bannerInputRef} className="hidden" onChange={handleBannerPick} />
@@ -1737,7 +1784,11 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             <Btn onClick={handleVisitorClick} className={C_ROW_B}>
               <div className="flex items-center gap-4"><span className="text-xl text-gray-400">👁️</span><span className="text-[15px] text-gray-200">Visitors</span></div>
               <div className="flex items-center gap-2">
-                {isVisitorUnlocked ? <span className="text-sm text-green-400 font-semibold">Unlocked</span> : <span className="text-sm text-orange-400 font-semibold animate-pulse">15 New Visitors</span>}
+                {isVisitorUnlocked ? (
+                  <span className="text-sm text-green-400 font-semibold">Recent ({recentCount})</span>
+                ) : (
+                  <span className="text-sm text-orange-400 font-semibold animate-pulse">Total ({totalCount})</span>
+                )}
                 <span className="text-gray-600 text-lg">›</span>
               </div>
             </Btn>
@@ -1819,13 +1870,13 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             <span className="text-xs text-green-400 bg-green-400/10 px-2.5 py-1 rounded-md border border-green-400/20 font-semibold">Unlocked</span>
           </div>
           <div className="flex flex-col gap-3">
-            {SAMPLE_VISITORS.map((v) => (
-              <div key={v.name} className="flex items-center justify-between p-3 bg-[#0b1120] rounded-xl border border-gray-800">
+            {visitors.length === 0 ? <p className="text-center text-gray-400 py-4 text-sm">No visitors yet.</p> : visitors.map((v) => (
+              <div key={v.id} className="flex items-center justify-between p-3 bg-[#0b1120] rounded-xl border border-gray-800">
                 <div className="flex items-center gap-3">
-                  <div className="relative"><UserAvatar name={v.name} className="w-12 h-12 rounded-full border border-gray-700" />{v.isOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0b1120] rounded-full" />}</div>
-                  <div><p className="font-bold text-[15px] text-white">{v.name}</p><p className="text-xs text-gray-500">{v.time}</p></div>
+                  <div className="relative"><UserAvatar src={v.visitorImg} name={v.visitorName} className="w-12 h-12 rounded-full border border-gray-700" /></div>
+                  <div><p className="font-bold text-[15px] text-white">{v.visitorName}</p><p className="text-xs text-gray-500">{v.timestamp ? new Date(v.timestamp.toMillis()).toLocaleString() : 'Just now'}</p></div>
                 </div>
-                <Btn onClick={() => onNotice(`Viewing ${v.name}'s profile coming soon!`)} className="bg-pink-500/10 text-pink-400 px-4 py-1.5 rounded-full font-bold text-xs border border-pink-500/20 hover:bg-pink-500/20 transition-colors min-h-[36px]">View</Btn>
+                <Btn onClick={() => onNotice(`Viewing ${v.visitorName}'s profile coming soon!`)} className="bg-pink-500/10 text-pink-400 px-4 py-1.5 rounded-full font-bold text-xs border border-pink-500/20 hover:bg-pink-500/20 transition-colors min-h-[36px]">View</Btn>
               </div>
             ))}
           </div>
@@ -1939,6 +1990,7 @@ const UserProfileView = ({
   const [coinInput, setCoinInput] = useState('');
   const [banDuration, setBanDuration] = useState('');
   const [banUnit, setBanUnit] = useState('60000');
+  const isMe = fullUserData.uid === currentUser.uid;
 
   useEffect(() => {
     setFullUserData(buildInitialUser());
@@ -1957,9 +2009,19 @@ const UserProfileView = ({
     return () => { unsubUser(); unsubGifts(); };
   }, [demoMode, demoReceivedGifts, demoUsersMap, targetUser]);
 
+  useEffect(() => {
+    if (demoMode || isMe || !currentUser) return;
+    db.collection('profileViews').add({
+      visitedUid: targetUser.uid,
+      visitorUid: currentUser.uid,
+      visitorName: currentProfile.displayName,
+      visitorImg: currentProfile.photoURL || '',
+      timestamp: FV.serverTimestamp()
+    }).catch(e => console.log(e));
+  }, [targetUser.uid, currentUser?.uid, demoMode, isMe]);
+
   if (loading) return <div className="h-full flex items-center justify-center bg-[#ffffff] text-[#1a1a2e] font-bold">Loading Profile...</div>;
   const user = fullUserData;
-  const isMe = user.uid === currentUser.uid;
   const isFriend = currentProfile?.friends?.includes(user.uid);
   const requestSent = currentProfile?.sentRequests?.includes(user.uid);
   const isTargetAdmin = user.displayId === ADMIN_DISPLAY_ID;
