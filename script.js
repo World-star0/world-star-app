@@ -316,7 +316,6 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
   useEffect(() => {
     if (!imageLoaded || !imgRef.current) return;
     
-    // Purane version (v1) ka sahi syntax
     const c = new Cropper(imgRef.current, {
       aspectRatio: aspectRatio,
       viewMode: 1,
@@ -340,7 +339,6 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
     const c = cropperRef.current;
     if (!c) return;
     try {
-      // Purane version mein aise crop nikalte hain
       const canvas = c.getCroppedCanvas({ 
         width: outputWidth, 
         height: Math.round(outputWidth / aspectRatio) 
@@ -357,8 +355,6 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
         <h3 className="text-white font-bold text-base">{title}</h3>
         <Btn onClick={handleCrop} disabled={!cropperReady} className="bg-[var(--color-rose)] text-white px-5 py-1.5 rounded-full font-bold text-sm disabled:opacity-50">Done</Btn>
       </div>
-      
-      {/* Image Container jisme image screen ke andar rahegi */}
       <div className="flex-1 w-full relative bg-black overflow-hidden flex items-center justify-center" style={{ minHeight: 0 }}>
         {imageUrl && (
           <img 
@@ -370,22 +366,7 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
           />
         )}
       </div>
-      
       <div className="p-4 text-center text-slate-400 text-xs shrink-0">{cropperReady ? 'Pinch to zoom · Drag to move' : 'Loading...'}</div>
-    </div>
-  );
-};
-  return (
-    <div className="fixed inset-0 z-[7000] bg-black flex flex-col">
-      <div className="flex justify-between items-center p-4 border-b border-slate-800 shrink-0">
-        <Btn onClick={onCancel} aria-label="Cancel crop" className="text-white text-2xl font-bold px-2">✕</Btn>
-        <h3 className="text-white font-bold text-base">{title}</h3>
-        <Btn onClick={handleCrop} disabled={!cropperReady} className="bg-[var(--color-rose)] text-white px-5 py-1.5 rounded-full font-bold text-sm disabled:opacity-50">Done</Btn>
-      </div>
-      <div className="flex-1 relative overflow-hidden flex items-center justify-center" style={{ minHeight: 0 }}>
-        {imageUrl && <img ref={imgRef} src={imageUrl} alt="Crop preview" onLoad={() => setImageLoaded(true)} style={{ display: 'block', maxWidth: '100%' }} />}
-      </div>
-      <div className="p-4 text-center text-slate-400 text-xs shrink-0">{cropperReady ? 'Pinch to zoom · Drag to move · Adjust crop box' : 'Loading...'}</div>
     </div>
   );
 };
@@ -1189,6 +1170,7 @@ const RoomInterface = ({
   const [newSongTitle, setNewSongTitle] = useState('');
   const [liveCoins, setLiveCoins] = useState(Number(userProfile.coins) || 0);
   const [toast, setToast] = useState(null);
+  const [joinedAt, setJoinedAt] = useState(Date.now());
   const chatEndRef = useRef(null);
   const longPressTimer = useRef(null);
   const micStreamRef = useRef(null);
@@ -1246,6 +1228,7 @@ const RoomInterface = ({
     if (demoMode) return;
     const roomRef = rDoc(roomId);
     let joined = false, active = true;
+    setJoinedAt(Date.now());
     (async () => {
       try {
         const doc = await roomRef.get();
@@ -1407,6 +1390,13 @@ const RoomInterface = ({
     if (emptyIdx === -1) { notify('All mic seats are occupied.'); return; }
     handleSeatClick(emptyIdx, null);
   };
+  const visibleMessages = messages.filter(msg => {
+    if (demoMode) return true;
+    if (!msg.createdAt) return true;
+    const ms = toTimestampMillis(msg.createdAt);
+    return ms !== null && ms >= joinedAt;
+  });
+
   return (
     <main className="room" data-testid="voice-room">
       <header className="topbar">
@@ -1433,7 +1423,7 @@ const RoomInterface = ({
           <div className="mt-auto" />
           <p className="line-system"><span>📢 <span className="font-extrabold text-[#f5c542]">Announcement: </span>{announcementText}</span></p>
           {roomData.currentSong && <p className="line-system"><span>🎵 <span className="font-extrabold text-[#7ee7ff]">Now Playing: </span>{roomData.currentSong}</span></p>}
-          {messages.map((msg) => msg.isSystem ? (
+          {visibleMessages.map((msg) => msg.isSystem ? (
             <p className="line-system" key={msg.id}><span>📢 <span className="font-extrabold">System: </span>{msg.text}</span></p>
           ) : (
             <p className="line-chat" key={msg.id}><span className="text-[#ff4d9a] mr-1.5">{msg.senderName}:</span>{msg.text}</p>
@@ -2118,6 +2108,7 @@ const UserProfileView = ({
           </div>
         </div>
       </div>
+      
       <div className="absolute bottom-0 w-full bg-[#ffffff] border-t border-slate-200 p-3 flex gap-2 z-50">
         {isMe ? (
           <Btn onClick={() => onNotice('Gift feature coming soon!')} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">🎁 Gift</Btn>
@@ -2129,6 +2120,37 @@ const UserProfileView = ({
           </>
         )}
       </div>
+
+      {showGiftWallModal && (
+        <SheetModal light zClass="z-[3500]" maxH="max-h-[80vh] overflow-y-auto no-scrollbar pb-8" onClose={() => setShowGiftWallModal(false)}>
+          <Grabber light />
+          <div className="flex justify-between items-center mb-4">
+            <div><h3 className="text-lg font-extrabold text-[#1a1a2e]">🎁 Gift Wall</h3><p className="text-xs text-slate-500">{totalGiftsCount} Gifts · {displayTotalCharms} Charms received</p></div>
+            <Btn onClick={() => setShowGiftWallModal(false)} className="text-slate-500 hover:text-[#1a1a2e] text-2xl font-bold px-2">×</Btn>
+          </div>
+          {groupedGifts.length === 0 ? <p className="text-center text-slate-500 text-sm py-8">No gifts received yet.</p> : (
+            <div className="grid grid-cols-2 gap-3">
+              {groupedGifts.map((group) => (
+                <div key={group.key} className="bg-[#f8f9fa] border border-slate-200 rounded-2xl p-3 flex flex-col justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl shrink-0">{group.giftType === 'image' ? <img src={group.giftIcon} alt={group.giftName} className="w-8 h-8 object-contain" /> : group.giftIcon}</span>
+                    <div className="min-w-0">
+                      <p className="font-extrabold text-sm text-[#1a1a2e] truncate">{group.giftName} × {group.totalCount}</p>
+                      <p className="text-[11px] font-semibold text-amber-600 tabular-nums">+{group.totalCharms} Charms</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200 overflow-x-auto no-scrollbar">
+                    <span className="text-[10px] font-semibold text-slate-500 shrink-0">From:</span>
+                    {group.senders.map((sender) => (
+                      <Btn key={sender.uid} title={`Open ${sender.name}'s profile`} aria-label={`Open ${sender.name}'s profile`} onClick={() => openSenderProfile(sender)} className="relative shrink-0 rounded-full hover:scale-105 transition-transform">
+                        <UserAvatar src={sender.img} name={sender.name} className="w-7 h-7 rounded-full border border-slate-300" />
+                      </Btn>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </SheetModal>
       )}
       {showAllGuardsModal && (
