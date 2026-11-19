@@ -91,7 +91,7 @@ const TITLE_BASE_STYLES = {
   'lava': { color: '#ff3300', textShadow: '0 0 8px #ff3300, 0 0 16px #ffaa00' },
   'candy': { color: '#ff9ecb', textShadow: '0 0 8px #ff9ecb, 0 0 16px #b3e5fc' },
   'royal': { color: '#7c3aed', textShadow: '0 0 8px #7c3aed, 0 0 16px #c084fc' },
-  'shadow': { color: '#4a4a4a', textShadow: '0 0 8px #000, 0 0 16px #333' },
+  'shadow': { color: '#7a7a7a', textShadow: '0 0 2px #fff, 0 0 10px #333, 0 0 20px #000' },
   'cyber': { color: '#00fff0', textShadow: '0 0 6px #00fff0, 0 0 12px #ff00aa' },
   'aurora': { color: '#52ffb8', textShadow: '0 0 8px #52ffb8, 0 0 16px #52d9ff' },
   'emerald': { color: '#10b981', textShadow: '0 0 8px #10b981, 0 0 16px #059669' },
