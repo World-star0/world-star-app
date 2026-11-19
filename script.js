@@ -21,17 +21,15 @@ const rDoc = (id) => col('voiceRooms').doc(id);
 const errMsg = (e, fb = 'Unknown error') => (e instanceof Error ? e.message : fb);
 
 const ADMIN_DISPLAY_ID = '461757881';
+const OFFICIAL_DISPLAY_IDS = [ADMIN_DISPLAY_ID]; // add more official IDs here if needed
+const isOfficialDisplayId = (id) => OFFICIAL_DISPLAY_IDS.includes(id);
+
 const SEAT_SLOTS = [
-  { index: 0, id: 'host', label: 'Host' },
-  { index: 1, id: 'side', label: 'Side' },
-  { index: 2, id: 'a1', label: 'Seat 3' },
-  { index: 3, id: 'a2', label: 'Seat 4' },
-  { index: 4, id: 'b1', label: 'Seat 5' },
-  { index: 5, id: 'b2', label: 'Seat 6' },
-  { index: 6, id: 'c1', label: 'Seat 7' },
-  { index: 7, id: 'c2', label: 'Seat 8' },
-  { index: 8, id: 'd1', label: 'Seat 9' },
-  { index: 9, id: 'd2', label: 'Seat 10' },
+  { index: 0, id: 'host', label: 'Host' }, { index: 1, id: 'side', label: 'Side' },
+  { index: 2, id: 'a1', label: 'Seat 3' }, { index: 3, id: 'a2', label: 'Seat 4' },
+  { index: 4, id: 'b1', label: 'Seat 5' }, { index: 5, id: 'b2', label: 'Seat 6' },
+  { index: 6, id: 'c1', label: 'Seat 7' }, { index: 7, id: 'c2', label: 'Seat 8' },
+  { index: 8, id: 'd1', label: 'Seat 9' }, { index: 9, id: 'd2', label: 'Seat 10' },
 ];
 
 const SND = 'https://actions.google.com/sounds/v1/';
@@ -44,17 +42,10 @@ const COUNTRIES = (
 ).split('|').map((row) => { const [code, name, flag] = row.split(':'); return { code, name, flag }; });
 
 const PRICE_TAGS = [
-  { id: 'none', name: 'None', icon: '🚫' },
-  { id: 'rose', name: 'Rose', icon: '🌹', price: 10 },
-  { id: 'heart', name: 'Heart', icon: '❤️', price: 20 },
-  { id: 'crown', name: 'Crown', icon: '👑', price: 99 },
+  { id: 'none', name: 'None', icon: '🚫' }, { id: 'rose', name: 'Rose', icon: '🌹', price: 10 },
+  { id: 'heart', name: 'Heart', icon: '❤️', price: 20 }, { id: 'crown', name: 'Crown', icon: '👑', price: 99 },
 ];
-const TITLES = [
-  { id: 'none', name: 'None' },
-  { id: 'king', name: 'King 👑' },
-  { id: 'queen', name: 'Queen 👸' },
-  { id: 'boss', name: 'Boss 💼' },
-];
+
 const VISITOR_PLANS = [
   { days: 3, price: 500, label: '3 Days Pass', subtitle: 'Basic Access', badge: null },
   { days: 7, price: 900, label: '7 Days Pass', subtitle: '1,166 Coins', badge: 'POPULAR' },
@@ -62,6 +53,65 @@ const VISITOR_PLANS = [
 ];
 const QUICK_REACTIONS = ['👋 Hello!', '🔥 Vibe!', '👏 Amazing!', '😂 Haha!', '❤️ Love it!', '🎤 Sing!'];
 
+// ============ TITLE SYSTEM ============
+const TITLE_GLOW_STYLES = [
+  { id: 'gold', name: 'Gold' }, { id: 'silver', name: 'Silver' }, { id: 'rainbow', name: 'Rainbow' },
+  { id: 'neon-pink', name: 'Pink Neon' }, { id: 'neon-blue', name: 'Blue Neon' },
+  { id: 'neon-green', name: 'Green Neon' }, { id: 'neon-purple', name: 'Purple Neon' },
+  { id: 'fire', name: 'Fire' }, { id: 'ice', name: 'Ice' }, { id: 'toxic', name: 'Toxic' },
+  { id: 'sunset', name: 'Sunset' }, { id: 'ocean', name: 'Ocean' }, { id: 'galaxy', name: 'Galaxy' },
+  { id: 'lava', name: 'Lava' }, { id: 'candy', name: 'Candy' }, { id: 'royal', name: 'Royal' },
+  { id: 'shadow', name: 'Shadow' }, { id: 'cyber', name: 'Cyberpunk' }, { id: 'aurora', name: 'Aurora' },
+  { id: 'emerald', name: 'Emerald' },
+];
+for (let h = 0; h < 360; h += 4) TITLE_GLOW_STYLES.push({ id: `hue-${h}`, name: `Hue ${h}°` });
+
+const TITLE_DURATIONS = [
+  { id: '24h', label: '24 Hours', ms: 24 * 60 * 60 * 1000 },
+  { id: '3d', label: '3 Days', ms: 3 * 24 * 60 * 60 * 1000 },
+  { id: '7d', label: '7 Days', ms: 7 * 24 * 60 * 60 * 1000 },
+  { id: '30d', label: '30 Days', ms: 30 * 24 * 60 * 60 * 1000 },
+  { id: 'perm', label: 'Permanent', ms: null },
+];
+
+const TITLE_BASE_STYLES = {
+  'gold': { color: '#ffd700', textShadow: '0 0 6px #ffd700, 0 0 12px #ffa500' },
+  'silver': { color: '#e0e0e0', textShadow: '0 0 6px #c0c0c0, 0 0 12px #a0a0a0' },
+  'rainbow': { backgroundImage: 'linear-gradient(90deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent', filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' },
+  'neon-pink': { color: '#ff4d9a', textShadow: '0 0 6px #ff4d9a, 0 0 14px #ff4d9a, 0 0 20px #ff4d9a' },
+  'neon-blue': { color: '#00d4ff', textShadow: '0 0 6px #00d4ff, 0 0 14px #00d4ff' },
+  'neon-green': { color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 14px #00ff88' },
+  'neon-purple': { color: '#b14dff', textShadow: '0 0 6px #b14dff, 0 0 14px #b14dff' },
+  'fire': { color: '#ff6b00', textShadow: '0 0 8px #ff0000, 0 0 16px #ff6b00, 0 0 24px #ffd700' },
+  'ice': { color: '#a0e9ff', textShadow: '0 0 8px #a0e9ff, 0 0 16px #ffffff' },
+  'toxic': { color: '#b4ff00', textShadow: '0 0 8px #b4ff00, 0 0 16px #00ff00' },
+  'sunset': { color: '#ff7b54', textShadow: '0 0 8px #ff7b54, 0 0 16px #ffb26b' },
+  'ocean': { color: '#00bcd4', textShadow: '0 0 8px #00bcd4, 0 0 16px #0077be' },
+  'galaxy': { color: '#c9b7ff', textShadow: '0 0 8px #8b5cf6, 0 0 16px #6d28d9, 0 0 24px #4c1d95' },
+  'lava': { color: '#ff3300', textShadow: '0 0 8px #ff3300, 0 0 16px #ffaa00' },
+  'candy': { color: '#ff9ecb', textShadow: '0 0 8px #ff9ecb, 0 0 16px #b3e5fc' },
+  'royal': { color: '#7c3aed', textShadow: '0 0 8px #7c3aed, 0 0 16px #c084fc' },
+  'shadow': { color: '#4a4a4a', textShadow: '0 0 8px #000, 0 0 16px #333' },
+  'cyber': { color: '#00fff0', textShadow: '0 0 6px #00fff0, 0 0 12px #ff00aa' },
+  'aurora': { color: '#52ffb8', textShadow: '0 0 8px #52ffb8, 0 0 16px #52d9ff' },
+  'emerald': { color: '#10b981', textShadow: '0 0 8px #10b981, 0 0 16px #059669' },
+};
+function getTitleStyleById(id) {
+  if (TITLE_BASE_STYLES[id]) return TITLE_BASE_STYLES[id];
+  if (typeof id === 'string' && id.startsWith('hue-')) {
+    const h = parseInt(id.split('-')[1], 10) || 0;
+    return { color: `hsl(${h}, 100%, 62%)`, textShadow: `0 0 8px hsl(${h}, 100%, 60%), 0 0 16px hsl(${h}, 100%, 50%)` };
+  }
+  return TITLE_BASE_STYLES.gold;
+}
+function getActiveTitles(titles, now = Date.now()) {
+  return (titles || []).filter((t) => t.active !== false && (!t.expiresAt || t.expiresAt > now));
+}
+function isTitleExpired(t, now = Date.now()) {
+  return Boolean(t.expiresAt && t.expiresAt <= now);
+}
+
+// ============ HELPERS ============
 function getGenderEmoji(gender) { if (gender === 'Female') return '♀️'; if (gender === 'Other') return '⚧️'; return '♂️'; }
 function isVisitorPassActive(visitorExpiry, now = Date.now()) { return Boolean(visitorExpiry && now < visitorExpiry); }
 function purchaseVisitorPass(params) {
@@ -86,7 +136,7 @@ function checkRoomEntryAccess(room, userId, now = Date.now()) {
 }
 function joinMemberToRoom(activeMembers, user, ownerId) {
   if (activeMembers.some((m) => m.uid === user.uid)) return activeMembers;
-  return [...activeMembers, { uid: user.uid, name: user.name, img: user.img, seatIndex: ownerId === user.uid ? 0 : null }];
+  return [...activeMembers, { uid: user.uid, name: user.name, img: user.img, seatIndex: ownerId === user.uid ? 0 : null, lastSeen: Date.now() }];
 }
 function assignSeatToMember(activeMembers, userId, seatIndex) {
   if (activeMembers.some((m) => m.seatIndex === seatIndex && m.uid !== userId)) return activeMembers;
@@ -114,7 +164,8 @@ function getCharmBadgeInfo(charms) {
   if (charms >= 1000) return { baseEmoji: '⭐', level: null, glowColor: 'rgba(255, 255, 255, 0.4)' };
   return { baseEmoji: '✨', level: null, glowColor: 'rgba(255, 255, 255, 0.4)' };
 }
-function canSendDirectMessage(messages, currentUserId, otherUserId) {
+function canSendDirectMessage(messages, currentUserId, otherUserId, isCurrentOfficial = false) {
+  if (isCurrentOfficial) return true;
   let lastTheirMsgIndex = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].senderId === otherUserId) { lastTheirMsgIndex = i; break; }
@@ -279,6 +330,22 @@ const MoreIcon = () => (
 );
 const ChevronIcon = () => <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
+// ============ TITLE BADGE COMPONENT ============
+const TitleBadge = ({ title, size = 'sm' }) => {
+  if (!title) return null;
+  const style = getTitleStyleById(title.glowStyle);
+  const isImg = title.emoji && (title.emoji.startsWith('http') || title.emoji.startsWith('data:'));
+  const szCls = size === 'sm' ? 'text-[10px]' : 'text-xs';
+  const imgSz = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+  return (
+    <span className={`inline-flex items-center gap-0.5 font-extrabold ${szCls} px-1.5 py-0.5 rounded-md bg-black/40 border border-white/10`} style={style}>
+      {isImg ? <img src={title.emoji} alt="" className={`inline-block ${imgSz} object-contain`} /> : title.emoji ? <span>{title.emoji}</span> : null}
+      <span>{title.text}</span>
+    </span>
+  );
+};
+
+// ============ IMAGE UTIL ============
 const compressImage = (file, maxWidth = 300) => new Promise((resolve) => {
   const reader = new FileReader();
   reader.readAsDataURL(file);
@@ -301,49 +368,28 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
   const [imageUrl, setImageUrl] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [cropperReady, setCropperReady] = useState(false);
-
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
     setImageUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
-
   useEffect(() => {
     if (!imageLoaded || !imgRef.current) return;
-    
-    const c = new Cropper(imgRef.current, {
-      aspectRatio: aspectRatio,
-      viewMode: 1,
-      dragMode: 'move',
-      autoCropArea: 0.85,
-      restore: false,
-      guides: true,
-      center: true,
-      highlight: false,
-      cropBoxMovable: true,
-      cropBoxResizable: true,
-      toggleDragModeOnDblclick: false,
-    });
-    
+    const c = new Cropper(imgRef.current, { aspectRatio, viewMode: 1, dragMode: 'move', autoCropArea: 0.85, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false });
     cropperRef.current = c;
     setCropperReady(true);
     return () => { try { c.destroy(); } catch {} };
   }, [imageLoaded, aspectRatio]);
-
   const handleCrop = async () => {
     const c = cropperRef.current;
     if (!c) return;
     try {
-      const canvas = c.getCroppedCanvas({ 
-        width: outputWidth, 
-        height: Math.round(outputWidth / aspectRatio) 
-      });
+      const canvas = c.getCroppedCanvas({ width: outputWidth, height: Math.round(outputWidth / aspectRatio) });
       if (!canvas) { onError?.('Crop selection unavailable.'); return; }
       onCrop(canvas.toDataURL('image/jpeg', 0.7));
     } catch (e) { onError?.(`Crop failed: ${errMsg(e)}`); }
   };
-
   return (
     <div className="fixed inset-0 z-[7000] bg-black flex flex-col">
       <div className="flex justify-between items-center p-4 border-b border-slate-800 shrink-0">
@@ -352,15 +398,7 @@ const ImageCropModal = ({ file, aspectRatio = 1, outputWidth = 400, title = 'Cro
         <Btn onClick={handleCrop} disabled={!cropperReady} className="bg-[var(--color-rose)] text-white px-5 py-1.5 rounded-full font-bold text-sm disabled:opacity-50">Done</Btn>
       </div>
       <div className="flex-1 w-full relative bg-black overflow-hidden flex items-center justify-center" style={{ minHeight: 0 }}>
-        {imageUrl && (
-          <img 
-            ref={imgRef} 
-            src={imageUrl} 
-            alt="Crop preview" 
-            onLoad={() => setImageLoaded(true)} 
-            style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }} 
-          />
-        )}
+        {imageUrl && <img ref={imgRef} src={imageUrl} alt="Crop preview" onLoad={() => setImageLoaded(true)} style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }} />}
       </div>
       <div className="p-4 text-center text-slate-400 text-xs shrink-0">{cropperReady ? 'Pinch to zoom · Drag to move' : 'Loading...'}</div>
     </div>
@@ -374,9 +412,7 @@ const DailyTaskModal = ({ onClose, onClaimCoins }) => {
   const [notice, setNotice] = useState(null);
   useEffect(() => {
     if (isClaimed) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => { if (prev <= 0) { clearInterval(interval); return 0; } return prev - 1; });
-    }, 1000);
+    const interval = setInterval(() => { setTimeLeft((prev) => { if (prev <= 0) { clearInterval(interval); return 0; } return prev - 1; }); }, 1000);
     return () => clearInterval(interval);
   }, [isClaimed]);
   const completeTask = (type) => {
@@ -384,10 +420,7 @@ const DailyTaskModal = ({ onClose, onClaimCoins }) => {
     setTasks((prev) => ({ ...prev, [type]: true }));
     setTimeLeft((prev) => Math.max(0, prev - 60));
   };
-  const claimTreasure = () => {
-    if (timeLeft > 0 || isClaimed) return;
-    setIsClaimed(true); onClaimCoins?.(500); setNotice('Treasure Box opened! You received 500 Coins.');
-  };
+  const claimTreasure = () => { if (timeLeft > 0 || isClaimed) return; setIsClaimed(true); onClaimCoins?.(500); setNotice('Treasure Box opened! You received 500 Coins.'); };
   return (
     <div className="fixed inset-0 z-[2000] bg-black/75 flex items-end justify-center" onClick={onClose}>
       <div className="w-full max-w-[430px] bg-[#0c0c10] border-t border-[#333] rounded-t-3xl p-5 text-white max-h-[85vh] overflow-y-auto no-scrollbar pb-8" onClick={(e) => e.stopPropagation()}>
@@ -403,25 +436,11 @@ const DailyTaskModal = ({ onClose, onClaimCoins }) => {
             <span className={`text-[10px] font-bold tabular-nums ${timeLeft === 0 ? 'text-[#f5c542]' : 'text-[#7ee7ff]'}`}>{isClaimed ? 'Claimed' : timeLeft === 0 ? 'Claim' : formatCountdown(timeLeft)}</span>
           </Btn>
           <div className="flex flex-col items-center"><div className="text-3xl mb-1">🎁</div><span className="text-[10px] text-[#ff4d9a] font-bold">VIP Only</span></div>
-          <div className="flex flex-col items-center opacity-40"><div className="text-3xl mb-1 grayscale">📦</div><span className="text-[10px]">Preparing</span></div>
-          <div className="flex flex-col items-center opacity-40"><div className="text-3xl mb-1 grayscale">📦</div><span className="text-[10px]">Preparing</span></div>
-          <div className="flex flex-col items-center opacity-40"><div className="text-3xl mb-1 grayscale">📦</div><span className="text-[10px]">Preparing</span></div>
-          <div className="flex flex-col items-center"><div className="text-3xl mb-1">🎁</div><span className="text-[10px] text-[#ff4d9a] font-bold">VIP Only</span></div>
         </div>
         <p className="text-xs text-[#9aa3c7] mb-3">Each completed task reduces the treasure countdown by 1 minute.</p>
         <div className="flex flex-col gap-3">
-          <div className="flex justify-between items-center border-t border-white/10 pt-3">
-            <span className="text-sm font-bold">Follow a Voice Room</span>
-            <Btn onClick={() => completeTask('follow')} className={`px-4 py-1.5 rounded-full text-xs font-bold ${tasks.follow ? 'border border-slate-600 text-slate-500' : 'border border-[#7ee7ff] text-[#7ee7ff]'}`}>{tasks.follow ? 'Done' : 'Go'}</Btn>
-          </div>
-          <div className="flex justify-between items-center border-t border-white/10 pt-3">
-            <span className="text-sm font-bold">Send Gift Once</span>
-            <Btn onClick={() => completeTask('gift')} className={`px-4 py-1.5 rounded-full text-xs font-bold ${tasks.gift ? 'border border-slate-600 text-slate-500' : 'border border-[#7ee7ff] text-[#7ee7ff]'}`}>{tasks.gift ? 'Done' : 'Go'}</Btn>
-          </div>
-          <div className="flex justify-between items-center border-t border-white/10 pt-3">
-            <span className="text-sm font-bold">Send Message Once</span>
-            <Btn disabled className="px-4 py-1.5 rounded-full text-xs font-bold border border-slate-600 text-slate-500">Done</Btn>
-          </div>
+          <div className="flex justify-between items-center border-t border-white/10 pt-3"><span className="text-sm font-bold">Follow a Voice Room</span><Btn onClick={() => completeTask('follow')} className={`px-4 py-1.5 rounded-full text-xs font-bold ${tasks.follow ? 'border border-slate-600 text-slate-500' : 'border border-[#7ee7ff] text-[#7ee7ff]'}`}>{tasks.follow ? 'Done' : 'Go'}</Btn></div>
+          <div className="flex justify-between items-center border-t border-white/10 pt-3"><span className="text-sm font-bold">Send Gift Once</span><Btn onClick={() => completeTask('gift')} className={`px-4 py-1.5 rounded-full text-xs font-bold ${tasks.gift ? 'border border-slate-600 text-slate-500' : 'border border-[#7ee7ff] text-[#7ee7ff]'}`}>{tasks.gift ? 'Done' : 'Go'}</Btn></div>
         </div>
         <Btn onClick={onClose} className="w-full bg-white/10 text-white mt-5 py-3 rounded-xl font-bold hover:bg-white/15">Close</Btn>
       </div>
@@ -433,31 +452,180 @@ const DraggableAdminBtn = ({ onClick }) => {
   const [pos, setPos] = useState({ x: typeof window !== 'undefined' ? window.innerWidth - 80 : 300, y: typeof window !== 'undefined' ? window.innerHeight - 150 : 500 });
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const handleStart = (e) => {
-    setIsDragging(true);
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setOffset({ x: clientX - pos.x, y: clientY - pos.y });
-  };
-  const handleMove = (e) => {
-    if (!isDragging) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setPos({ x: clientX - offset.x, y: clientY - offset.y });
-  };
+  const handleStart = (e) => { setIsDragging(true); const cx = 'touches' in e ? e.touches[0].clientX : e.clientX; const cy = 'touches' in e ? e.touches[0].clientY : e.clientY; setOffset({ x: cx - pos.x, y: cy - pos.y }); };
+  const handleMove = (e) => { if (!isDragging) return; const cx = 'touches' in e ? e.touches[0].clientX : e.clientX; const cy = 'touches' in e ? e.touches[0].clientY : e.clientY; setPos({ x: cx - offset.x, y: cy - offset.y }); };
   const handleEnd = () => setIsDragging(false);
   return (
-    <Btn
-      aria-label="Open Super Admin Dashboard"
-      className="fixed z-[100] w-14 h-14 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(255,215,0,0.6)] border-2 border-yellow-200 cursor-grab active:cursor-grabbing touch-none"
+    <Btn aria-label="Open Super Admin Dashboard" className="fixed z-[100] w-14 h-14 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(255,215,0,0.6)] border-2 border-yellow-200 cursor-grab active:cursor-grabbing touch-none"
       style={{ left: pos.x, top: pos.y, transition: isDragging ? 'none' : 'all 0.2s' }}
       onMouseDown={handleStart} onMouseMove={handleMove} onMouseUp={handleEnd} onMouseLeave={handleEnd}
       onTouchStart={handleStart} onTouchMove={handleMove} onTouchEnd={handleEnd}
-      onClick={() => { if (!isDragging) onClick(); }}
-    >👑</Btn>
+      onClick={() => { if (!isDragging) onClick(); }}>👑</Btn>
   );
 };
 
+// ============ TITLE MANAGER (ADMIN) ============
+const TitleManagerAdmin = ({ onNotice }) => {
+  const [templates, setTemplates] = useState([]);
+  const [newTitle, setNewTitle] = useState({ text: '', emoji: '', glowStyle: 'gold' });
+  const [targetDisplayId, setTargetDisplayId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [duration, setDuration] = useState('7d');
+  const [busy, setBusy] = useState(false);
+  const [loadedUser, setLoadedUser] = useState(null);
+  const [loadedTitles, setLoadedTitles] = useState([]);
+
+  useEffect(() => {
+    const unsub = db.collection('settings').doc('titleTemplates').onSnapshot((doc) => {
+      setTemplates(doc.exists ? (doc.data().list || []) : []);
+    });
+    return () => unsub();
+  }, []);
+
+  const saveTemplates = async (list) => { await db.collection('settings').doc('titleTemplates').set({ list }); };
+
+  const createTemplate = async () => {
+    if (!newTitle.text.trim()) return onNotice('Enter title text');
+    const tpl = { id: `t-${Date.now()}`, text: newTitle.text.trim().slice(0, 20), emoji: newTitle.emoji.trim(), glowStyle: newTitle.glowStyle || 'gold', createdAt: Date.now() };
+    await saveTemplates([...templates, tpl]);
+    setNewTitle({ text: '', emoji: '', glowStyle: 'gold' });
+    onNotice('Title template created!');
+  };
+
+  const deleteTemplate = async (id) => { await saveTemplates(templates.filter((t) => t.id !== id)); onNotice('Template deleted'); };
+
+  const loadUser = async () => {
+    if (!targetDisplayId.trim()) return onNotice('Enter user display ID');
+    setBusy(true);
+    try {
+      const snap = await db.collection('users').where('displayId', '==', targetDisplayId.trim()).limit(1).get();
+      if (snap.empty) { setBusy(false); return onNotice('User not found'); }
+      const doc = snap.docs[0];
+      setLoadedUser({ uid: doc.id, ...doc.data() });
+      setLoadedTitles(doc.data().titles || []);
+    } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+    setBusy(false);
+  };
+
+  const giveTitle = async () => {
+    if (!loadedUser) return onNotice('Load a user first');
+    if (!selectedTemplateId) return onNotice('Select a template');
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    if (!tpl) return onNotice('Template not found');
+    setBusy(true);
+    try {
+      const dur = TITLE_DURATIONS.find((d) => d.id === duration);
+      const expiresAt = dur.ms ? Date.now() + dur.ms : null;
+      const newTitleOnUser = { id: `ut-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, templateId: tpl.id, text: tpl.text, emoji: tpl.emoji, glowStyle: tpl.glowStyle, expiresAt, active: true, grantedAt: Date.now() };
+      const updated = [...(loadedTitles || []), newTitleOnUser];
+      await uDoc(loadedUser.uid).update({ titles: updated });
+      setLoadedTitles(updated);
+      onNotice(`Title "${tpl.text}" granted!`);
+      setSelectedTemplateId(null);
+    } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+    setBusy(false);
+  };
+
+  const revokeSingle = async (titleId) => {
+    if (!loadedUser) return;
+    try {
+      const updated = (loadedTitles || []).filter((t) => t.id !== titleId);
+      await uDoc(loadedUser.uid).update({ titles: updated });
+      setLoadedTitles(updated);
+      onNotice('Title revoked');
+    } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+  };
+
+  const revokeAll = async () => {
+    if (!loadedUser) return;
+    try { await uDoc(loadedUser.uid).update({ titles: [] }); setLoadedTitles([]); onNotice('All titles revoked'); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+  };
+
+  const toggleAdminBadge = async () => {
+    if (!loadedUser) return onNotice('Load a user first');
+    try {
+      const next = loadedUser.showAdminBadge === false ? true : false;
+      await uDoc(loadedUser.uid).update({ showAdminBadge: next });
+      setLoadedUser({ ...loadedUser, showAdminBadge: next });
+      onNotice(next ? 'Admin badge shown' : 'Admin badge hidden');
+    } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-[#0c0c10] p-4 rounded-xl border border-white/10">
+        <h3 className="font-bold mb-3 text-yellow-500">✨ Create Title Template</h3>
+        <input type="text" placeholder="Title text (max 20)" maxLength={20} value={newTitle.text} onChange={(e) => setNewTitle({ ...newTitle, text: e.target.value })} className={C_INP_SM + ' mb-2'} />
+        <input type="text" placeholder="Emoji or image URL (optional)" maxLength={400} value={newTitle.emoji} onChange={(e) => setNewTitle({ ...newTitle, emoji: e.target.value })} className={C_INP_SM + ' mb-2'} />
+        <div className="flex items-center justify-between mb-1.5">
+          <label className={C_LBL_XS}>Glow Style ({TITLE_GLOW_STYLES.length} available)</label>
+          <span className="text-[10px] text-yellow-500 font-bold">{TITLE_GLOW_STYLES.find((g) => g.id === newTitle.glowStyle)?.name}</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto mb-3 p-1 bg-black/40 rounded-lg">
+          {TITLE_GLOW_STYLES.map((g) => (
+            <Btn key={g.id} onClick={() => setNewTitle({ ...newTitle, glowStyle: g.id })} className={`text-[9px] py-1.5 rounded border font-bold ${newTitle.glowStyle === g.id ? 'border-pink-500 bg-pink-500/20 text-white' : 'border-white/10 text-slate-400'}`} style={newTitle.glowStyle === g.id ? getTitleStyleById(g.id) : {}}>{g.name}</Btn>
+          ))}
+        </div>
+        <div className="bg-black/40 p-2 rounded-lg mb-3 flex items-center justify-center min-h-[36px]">
+          <TitleBadge title={{ text: newTitle.text || 'Preview', emoji: newTitle.emoji, glowStyle: newTitle.glowStyle }} size="md" />
+        </div>
+        <Btn onClick={createTemplate} className="w-full bg-green-600 py-2 rounded-lg font-bold text-sm">+ Create Template</Btn>
+      </div>
+
+      <div className="bg-[#0c0c10] p-4 rounded-xl border border-white/10">
+        <h3 className="font-bold mb-3">📋 Templates ({templates.length})</h3>
+        {templates.length === 0 ? <p className="text-xs text-gray-500">No templates yet.</p> : (
+          <div className="space-y-2 max-h-52 overflow-y-auto">
+            {templates.map((t) => (
+              <div key={t.id} className="flex items-center justify-between p-2 bg-black/30 rounded">
+                <TitleBadge title={t} size="md" />
+                <Btn onClick={() => deleteTemplate(t.id)} className="text-red-500 text-xs px-2 py-1">✕</Btn>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[#0c0c10] p-4 rounded-xl border border-white/10">
+        <h3 className="font-bold mb-3">🎁 Give / Revoke Titles</h3>
+        <input type="text" placeholder="User display ID" value={targetDisplayId} onChange={(e) => setTargetDisplayId(e.target.value)} className={C_INP_SM + ' mb-2'} />
+        <Btn onClick={loadUser} disabled={busy} className="w-full bg-blue-600 py-2 rounded-lg font-bold text-sm mb-3">{busy ? 'Loading...' : 'Load User'}</Btn>
+        {loadedUser && (
+          <>
+            <div className="bg-black/30 p-2 rounded-lg mb-2 text-xs text-slate-300">
+              <span className="font-bold text-white">{loadedUser.displayName}</span> · ID {loadedUser.displayId} {loadedUser.isAdmin && <span className="ml-1 text-purple-400">(Admin)</span>}
+            </div>
+            <select value={selectedTemplateId || ''} onChange={(e) => setSelectedTemplateId(e.target.value || null)} className={C_INP_SM + ' mb-2'}>
+              <option value="">Select template...</option>
+              {templates.map((t) => <option key={t.id} value={t.id}>{t.text}</option>)}
+            </select>
+            <select value={duration} onChange={(e) => setDuration(e.target.value)} className={C_INP_SM + ' mb-2'}>
+              {TITLE_DURATIONS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+            </select>
+            <Btn onClick={giveTitle} disabled={busy || !selectedTemplateId} className="w-full bg-pink-500 disabled:bg-gray-600 py-2 rounded-lg font-bold text-sm mb-2">Give Title</Btn>
+            <Btn onClick={toggleAdminBadge} className="w-full bg-purple-600 py-2 rounded-lg font-bold text-sm mb-3">{loadedUser.showAdminBadge === false ? '👁️ Show Admin Badge' : '🙈 Hide Admin Badge'}</Btn>
+            <div className="border-t border-white/10 pt-2">
+              <p className="text-[11px] text-slate-400 mb-1">Current Titles ({loadedTitles.length})</p>
+              {loadedTitles.length === 0 ? <p className="text-[11px] text-gray-500">None</p> : loadedTitles.map((t) => (
+                <div key={t.id} className="flex items-center justify-between p-1.5 bg-black/30 rounded mb-1">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <TitleBadge title={t} />
+                    {t.expiresAt && <span className="text-[9px] text-gray-500">{new Date(t.expiresAt).toLocaleDateString()}</span>}
+                  </div>
+                  <Btn onClick={() => revokeSingle(t.id)} className="text-red-400 text-[10px] px-1.5 py-0.5">Revoke</Btn>
+                </div>
+              ))}
+              {loadedTitles.length > 0 && <Btn onClick={revokeAll} className="w-full bg-red-700 py-1.5 rounded text-xs font-bold mt-2">Revoke ALL</Btn>}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============ ADMIN DASHBOARD ============
 const AdminDashboard = ({ onClose, onNotice }) => {
   const [activeMenu, setActiveMenu] = useState('gifts');
   const [currentGifts, setCurrentGifts] = useState([]);
@@ -497,19 +665,20 @@ const AdminDashboard = ({ onClose, onNotice }) => {
         <Btn onClick={onClose} aria-label="Close admin dashboard" className="text-2xl font-bold text-slate-400 hover:text-white">×</Btn>
       </div>
       <div className="flex gap-2 p-4 border-b border-white/10 shrink-0">
-        <Btn onClick={() => setActiveMenu('gifts')} className={`flex-1 py-2 rounded-lg font-bold ${activeMenu === 'gifts' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>🎁 Manage Gifts</Btn>
-        <Btn onClick={() => setActiveMenu('users')} className={`flex-1 py-2 rounded-lg font-bold ${activeMenu === 'users' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>👥 Users</Btn>
+        <Btn onClick={() => setActiveMenu('gifts')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${activeMenu === 'gifts' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>🎁 Gifts</Btn>
+        <Btn onClick={() => setActiveMenu('titles')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${activeMenu === 'titles' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>👑 Titles</Btn>
+        <Btn onClick={() => setActiveMenu('users')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${activeMenu === 'users' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>👥 Users</Btn>
       </div>
       <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
         {activeMenu === 'gifts' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center mb-2">
               <p className="text-sm text-slate-400">Add Emoji, Image, Video &amp; Sound</p>
-              <Btn onClick={() => setCurrentGifts([...currentGifts, { i: '🎁', n: 'New Gift', p: 100, anim: 'float', sound: '', type: 'emoji' }])} className="bg-green-600 px-3 py-1.5 rounded text-sm font-bold shadow-md">+ Add New Gift</Btn>
+              <Btn onClick={() => setCurrentGifts([...currentGifts, { i: '🎁', n: 'New Gift', p: 100, anim: 'float', sound: '', type: 'emoji' }])} className="bg-green-600 px-3 py-1.5 rounded text-sm font-bold shadow-md">+ Add</Btn>
             </div>
             {currentGifts.map((g, idx) => (
               <div key={idx} className="bg-[#0c0c10] p-3 rounded-xl border border-white/10 space-y-3 relative">
-                <Btn aria-label="Remove gift" onClick={() => setCurrentGifts(currentGifts.filter((_, i) => i !== idx))} className="absolute top-2 right-2 text-red-500 font-bold text-lg hover:text-red-400 z-10">×</Btn>
+                <Btn aria-label="Remove gift" onClick={() => setCurrentGifts(currentGifts.filter((_, i) => i !== idx))} className="absolute top-2 right-2 text-red-500 font-bold text-lg z-10">×</Btn>
                 <div className="flex gap-2 pr-6">
                   <div className="w-20">
                     <label className={C_LBL_XS}>Preview</label>
@@ -527,36 +696,23 @@ const AdminDashboard = ({ onClose, onNotice }) => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className={C_LBL_XS}>Change Emoji</label>
-                    <input type="text" value={g.type === 'emoji' ? g.i : ''} placeholder="e.g. 🌹" onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], i: e.target.value, type: 'emoji' }; setCurrentGifts(n); }} className={C_INP_SM} />
-                  </div>
-                  <div>
-                    <label className={C_LBL_XS}>Upload Img/Vid</label>
-                    <input type="file" accept="image/*,video/*" onChange={(e) => handleFileUpload(e, idx, 'i')} className="w-full text-xs text-slate-400" />
-                  </div>
+                  <div><label className={C_LBL_XS}>Change Emoji</label><input type="text" value={g.type === 'emoji' ? g.i : ''} placeholder="e.g. 🌹" onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], i: e.target.value, type: 'emoji' }; setCurrentGifts(n); }} className={C_INP_SM} /></div>
+                  <div><label className={C_LBL_XS}>Upload Img/Vid</label><input type="file" accept="image/*,video/*" onChange={(e) => handleFileUpload(e, idx, 'i')} className="w-full text-xs text-slate-400" /></div>
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className={C_LBL_XS}>Animation</label>
-                    <select value={g.anim || 'float'} onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], anim: e.target.value }; setCurrentGifts(n); }} className={C_INP_SM}>
-                      <option value="float">Float Up</option><option value="bounce">Bounce</option><option value="explode">Explode</option><option value="slide">Slide</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className={C_LBL_XS}>Upload Sound</label>
-                    <input type="file" accept="audio/*" onChange={(e) => handleFileUpload(e, idx, 'sound')} className="w-full text-xs text-slate-400" />
-                  </div>
+                  <div className="flex-1"><label className={C_LBL_XS}>Animation</label><select value={g.anim || 'float'} onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], anim: e.target.value }; setCurrentGifts(n); }} className={C_INP_SM}><option value="float">Float Up</option><option value="bounce">Bounce</option><option value="explode">Explode</option><option value="slide">Slide</option></select></div>
+                  <div className="flex-1"><label className={C_LBL_XS}>Upload Sound</label><input type="file" accept="audio/*" onChange={(e) => handleFileUpload(e, idx, 'sound')} className="w-full text-xs text-slate-400" /></div>
                 </div>
               </div>
             ))}
-            <Btn onClick={handleSaveGifts} disabled={uploadingMedia} className="w-full bg-[var(--color-rose)] py-3 rounded-xl font-bold mt-4 shadow-lg disabled:opacity-50">{uploadingMedia ? 'Uploading Media...' : 'Save All Gifts'}</Btn>
+            <Btn onClick={handleSaveGifts} disabled={uploadingMedia} className="w-full bg-[var(--color-rose)] py-3 rounded-xl font-bold mt-4 shadow-lg disabled:opacity-50">{uploadingMedia ? 'Uploading...' : 'Save All Gifts'}</Btn>
           </div>
         )}
+        {activeMenu === 'titles' && <TitleManagerAdmin onNotice={onNotice} />}
         {activeMenu === 'users' && (
           <div className="text-center text-slate-400 mt-10 p-5 bg-[#0c0c10] rounded-xl border border-white/10">
             <p className="text-lg font-bold mb-2 text-white">User Management</p>
-            <p className="text-sm">To manage a specific user, go to their Profile and click the ⋮ (More) button.</p>
+            <p className="text-sm">Go to a user's Profile and click ⋮ for full controls.</p>
           </div>
         )}
       </div>
@@ -565,17 +721,14 @@ const AdminDashboard = ({ onClose, onNotice }) => {
 };
 
 const HomeTab = ({ userProfile, setActiveTab, openProfile, onNotice }) => {
-  const isAdmin = userProfile?.displayId === ADMIN_DISPLAY_ID;
-  const comingSoon = () => onNotice('Under Maintenance! This feature is coming soon.');
+  const isAdmin = isOfficialDisplayId(userProfile?.displayId);
+  const comingSoon = () => onNotice('Under Maintenance! Coming soon.');
   return (
     <div className="pb-4">
       <div className="p-4 flex justify-between items-center">
         <Btn onClick={() => openProfile(userProfile)} className="flex items-center gap-3 text-left">
           <UserAvatar src={userProfile?.photoURL} name={userProfile?.displayName} className="w-12 h-12 rounded-full border-2 border-[var(--color-rose)]" />
-          <div>
-            <p className="text-[11px] text-slate-400 font-semibold">Welcome back,</p>
-            <h2 className="font-bold text-lg text-white leading-tight">{userProfile?.displayName}</h2>
-          </div>
+          <div><p className="text-[11px] text-slate-400 font-semibold">Welcome back,</p><h2 className="font-bold text-lg text-white leading-tight">{userProfile?.displayName}</h2></div>
         </Btn>
         <Btn onClick={comingSoon} className="bg-[#0c0c10] border border-yellow-500/50 rounded-full px-3 py-1.5 flex items-center gap-1.5">
           <span className="text-yellow-500 text-base">🪙</span>
@@ -603,16 +756,8 @@ const HomeTab = ({ userProfile, setActiveTab, openProfile, onNotice }) => {
           <Btn onClick={() => setActiveTab('voice')} className="text-xs text-[var(--color-rose)] font-semibold">See All</Btn>
         </div>
         <div className="flex flex-col gap-3">
-          <Btn onClick={() => setActiveTab('voice')} className="w-full text-left bg-[#0c0c10] p-3 rounded-xl border border-white/10 flex items-center gap-3 hover:bg-white/5 transition">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-xl">🎵</div>
-            <div className="flex-1"><p className="font-bold text-sm text-white">Music Lovers</p><p className="text-xs text-green-400">Live Voice Room</p></div>
-            <span className="bg-[var(--color-rose)]/20 text-[var(--color-rose)] border border-[var(--color-rose)]/40 text-xs font-bold px-3 py-1.5 rounded-full">Join</span>
-          </Btn>
-          <Btn onClick={() => setActiveTab('voice')} className="w-full text-left bg-[#0c0c10] p-3 rounded-xl border border-white/10 flex items-center gap-3 hover:bg-white/5 transition">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-xl">🎮</div>
-            <div className="flex-1"><p className="font-bold text-sm text-white">Gaming Squad</p><p className="text-xs text-green-400">Live Voice Room</p></div>
-            <span className="bg-[var(--color-rose)]/20 text-[var(--color-rose)] border border-[var(--color-rose)]/40 text-xs font-bold px-3 py-1.5 rounded-full">Join</span>
-          </Btn>
+          <Btn onClick={() => setActiveTab('voice')} className="w-full text-left bg-[#0c0c10] p-3 rounded-xl border border-white/10 flex items-center gap-3 hover:bg-white/5"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-xl">🎵</div><div className="flex-1"><p className="font-bold text-sm text-white">Music Lovers</p><p className="text-xs text-green-400">Live Voice Room</p></div><span className="bg-[var(--color-rose)]/20 text-[var(--color-rose)] border border-[var(--color-rose)]/40 text-xs font-bold px-3 py-1.5 rounded-full">Join</span></Btn>
+          <Btn onClick={() => setActiveTab('voice')} className="w-full text-left bg-[#0c0c10] p-3 rounded-xl border border-white/10 flex items-center gap-3 hover:bg-white/5"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-xl">🎮</div><div className="flex-1"><p className="font-bold text-sm text-white">Gaming Squad</p><p className="text-xs text-green-400">Live Voice Room</p></div><span className="bg-[var(--color-rose)]/20 text-[var(--color-rose)] border border-[var(--color-rose)]/40 text-xs font-bold px-3 py-1.5 rounded-full">Join</span></Btn>
         </div>
       </div>
     </div>
@@ -627,10 +772,8 @@ const LoginScreen = ({ onNotice }) => {
     if (provider === 'Google') {
       if (loading) return;
       setLoading(true);
-      try {
-        const result = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-        onNotice(`✅ Welcome, ${result.user?.displayName || 'Star'}!`);
-      } catch (e) { onNotice(`❌ ${errMsg(e, 'Login failed.')}`); }
+      try { const result = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); onNotice(`✅ Welcome, ${result.user?.displayName || 'Star'}!`); }
+      catch (e) { onNotice(`❌ ${errMsg(e, 'Login failed.')}`); }
       finally { setLoading(false); }
       return;
     }
@@ -638,49 +781,34 @@ const LoginScreen = ({ onNotice }) => {
   };
   return (
     <div className="fixed inset-0 bg-[#f1f5f9] flex justify-center overflow-hidden" style={{ colorScheme: 'light' }}>
-      <div className="relative w-full max-w-[450px] bg-[#ffffff] text-[#1a1a2e] h-[100dvh] flex flex-col overflow-hidden sm:shadow-2xl">
-        <Btn onClick={() => onNotice('🚧 Help page coming soon...')} className="absolute top-4 right-4 text-[14px] text-[#666666] font-medium cursor-pointer px-3 py-2 min-h-[44px] flex items-center">Help</Btn>
+      <div className="relative w-full max-w-[450px] bg-white text-[#1a1a2e] h-[100dvh] flex flex-col overflow-hidden sm:shadow-2xl">
+        <Btn onClick={() => onNotice('🚧 Help page coming soon...')} className="absolute top-4 right-4 text-sm text-[#666] font-medium px-3 py-2 min-h-[44px] flex items-center">Help</Btn>
         <div className="flex-1 flex flex-col items-center justify-center pt-14 pb-5 px-6">
           <div className="relative w-[110px] h-[110px] rounded-[28px] shadow-[0_8px_25px_rgba(0,0,0,0.15)] mb-5 overflow-hidden bg-gradient-to-br from-[#ff4d9a] via-[#a855f7] to-[#3b82f6] flex items-center justify-center shrink-0">
-            {(!iconLoaded || iconFailed) && <span className="text-5xl select-none" aria-hidden="true">⭐</span>}
-            {!iconFailed && (
-              <img src="https://i.postimg.cc/YCG2BX3t/World-star.png" alt="World Star" referrerPolicy="no-referrer" onLoad={() => setIconLoaded(true)} onError={() => setIconFailed(true)} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${iconLoaded ? 'opacity-100' : 'opacity-0'}`} />
-            )}
+            {(!iconLoaded || iconFailed) && <span className="text-5xl select-none">⭐</span>}
+            {!iconFailed && <img src="https://i.postimg.cc/YCG2BX3t/World-star.png" alt="World Star" referrerPolicy="no-referrer" onLoad={() => setIconLoaded(true)} onError={() => setIconFailed(true)} className={`absolute inset-0 w-full h-full object-cover transition-opacity ${iconLoaded ? 'opacity-100' : 'opacity-0'}`} />}
           </div>
-          <h1 className="text-[32px] font-extrabold text-[#1a1a2e] tracking-[-0.5px] mb-2 leading-tight">World Star</h1>
-          <p className="text-[16px] text-[#555555] font-normal">Party Game &amp; Voice Chat</p>
+          <h1 className="text-[32px] font-extrabold text-[#1a1a2e] tracking-tight mb-2">World Star</h1>
+          <p className="text-[16px] text-[#555]">Party Game &amp; Voice Chat</p>
         </div>
         <div className="px-[25px] pt-5 pb-8 flex flex-col gap-[15px]">
-          <Btn onClick={() => loginWith('Google')} disabled={loading} className="w-full py-[15px] px-4 rounded-[30px] border border-[#e0e0e0] bg-[#ffffff] text-[16px] font-semibold text-[#1a1a2e] flex items-center justify-center gap-2.5 cursor-pointer transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)] active:bg-[#f5f5f5] active:scale-[0.98] disabled:opacity-60 min-h-[52px]">
-            <svg className="w-[22px] h-[22px] shrink-0" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
-              <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
-              <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
-              <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
-            </svg>
+          <Btn onClick={() => loginWith('Google')} disabled={loading} className="w-full py-[15px] px-4 rounded-[30px] border border-[#e0e0e0] bg-white text-[16px] font-semibold text-[#1a1a2e] flex items-center justify-center gap-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] active:scale-[0.98] disabled:opacity-60 min-h-[52px]">
+            <svg className="w-[22px] h-[22px] shrink-0" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" /><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" /><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" /><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" /></svg>
             <span>{loading ? 'Signing in...' : 'Sign in with Google'}</span>
           </Btn>
-          <Btn onClick={() => loginWith('Facebook')} className="relative w-full py-[15px] px-4 rounded-[30px] border border-[#e0e0e0] bg-[#ffffff] text-[16px] font-semibold text-[#1a1a2e] flex items-center justify-center gap-2.5 cursor-pointer transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)] active:bg-[#f5f5f5] active:scale-[0.98] min-h-[52px]">
+          <Btn onClick={() => loginWith('Facebook')} className="relative w-full py-[15px] px-4 rounded-[30px] border border-[#e0e0e0] bg-white text-[16px] font-semibold text-[#1a1a2e] flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[52px]">
             <span className="absolute -top-2 right-5 bg-[#e0f7fa] text-[#00bcd4] text-[10px] px-2 py-0.5 rounded-[10px] border border-[#b2ebf2] font-bold">Last Sign</span>
-            <svg className="w-[22px] h-[22px] shrink-0" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+            <svg className="w-[22px] h-[22px] shrink-0" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
             <span>Sign in with Facebook</span>
           </Btn>
           <div className="flex justify-center gap-[25px] mt-[10px]">
-            <Btn onClick={() => loginWith('Phone')} title="Login with Phone" aria-label="Login with Phone" className="w-[50px] h-[50px] rounded-full bg-[#f5f5f5] flex items-center justify-center transition-all active:bg-[#e0e0e0] active:scale-95">
-              <svg className="w-6 h-6 fill-[#333333]" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
-            </Btn>
-            <Btn onClick={() => loginWith('X')} title="Login with X" aria-label="Login with X" className="w-[50px] h-[50px] rounded-full bg-[#f5f5f5] flex items-center justify-center transition-all active:bg-[#e0e0e0] active:scale-95">
-              <svg className="w-6 h-6 fill-[#333333]" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-            </Btn>
-            <Btn onClick={() => loginWith('QR Code')} title="Scan QR" aria-label="Login with QR Code" className="w-[50px] h-[50px] rounded-full bg-[#f5f5f5] flex items-center justify-center transition-all active:bg-[#e0e0e0] active:scale-95">
-              <svg className="w-6 h-6 fill-[#333333]" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 15h6v6H3v-6zm2 2v2h2v-2H5zm10-2h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm-4-4h2v2h-2v-2z" /></svg>
-            </Btn>
+            <Btn onClick={() => loginWith('Phone')} title="Login with Phone" className="w-[50px] h-[50px] rounded-full bg-[#f5f5f5] flex items-center justify-center active:scale-95"><svg className="w-6 h-6 fill-[#333]" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg></Btn>
+            <Btn onClick={() => loginWith('X')} title="Login with X" className="w-[50px] h-[50px] rounded-full bg-[#f5f5f5] flex items-center justify-center active:scale-95"><svg className="w-6 h-6 fill-[#333]" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg></Btn>
+            <Btn onClick={() => loginWith('QR Code')} title="Scan QR" className="w-[50px] h-[50px] rounded-full bg-[#f5f5f5] flex items-center justify-center active:scale-95"><svg className="w-6 h-6 fill-[#333]" viewBox="0 0 24 24"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 15h6v6H3v-6zm2 2v2h2v-2H5zm10-2h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm-4-4h2v2h-2v-2z" /></svg></Btn>
           </div>
         </div>
-        <div className="text-center text-[11px] text-[#888888] px-[30px] pb-5 leading-[1.5]">
-          Login means you agree to{' '}
-          <Btn onClick={() => onNotice('🚧 Terms of Service Coming Soon!')} className="text-[#1a1a2e] font-semibold underline cursor-pointer">Terms of Service</Btn>{' '}and{' '}
-          <Btn onClick={() => onNotice('🚧 Privacy Policy Coming Soon!')} className="text-[#1a1a2e] font-semibold underline cursor-pointer">Privacy Policy</Btn>
+        <div className="text-center text-[11px] text-[#888] px-[30px] pb-5 leading-[1.5]">
+          Login means you agree to <Btn onClick={() => onNotice('🚧 Terms Coming Soon!')} className="text-[#1a1a2e] font-semibold underline">Terms</Btn> and <Btn onClick={() => onNotice('🚧 Privacy Coming Soon!')} className="text-[#1a1a2e] font-semibold underline">Privacy</Btn>
         </div>
       </div>
     </div>
@@ -716,17 +844,17 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
           ))}
         </div>
         <div className="flex gap-3 items-center">
-          <Btn onClick={() => onNotice('Room search is coming soon.')} aria-label="Search rooms" className="text-xl cursor-pointer text-slate-300 w-10 h-10 flex items-center justify-center">🔍</Btn>
-          <Btn onClick={() => setSubView('create')} className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold cursor-pointer shadow-lg shadow-blue-500/30 flex items-center gap-1 text-sm"><span>+</span> Create</Btn>
+          <Btn onClick={() => onNotice('Room search coming soon.')} className="text-xl text-slate-300 w-10 h-10 flex items-center justify-center">🔍</Btn>
+          <Btn onClick={() => setSubView('create')} className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold shadow-lg shadow-blue-500/30 flex items-center gap-1 text-sm"><span>+</span> Create</Btn>
         </div>
       </div>
-      <Btn onClick={() => onNotice('Hot Room ranking is coming soon.')} className="w-[calc(100%-2.5rem)] text-left mx-5 mb-5 bg-gradient-to-br from-purple-600 to-pink-500 rounded-2xl p-5 relative overflow-hidden cursor-pointer shadow-lg shadow-purple-500/20 block">
+      <Btn onClick={() => onNotice('Hot Room coming soon.')} className="w-[calc(100%-2.5rem)] text-left mx-5 mb-5 bg-gradient-to-br from-purple-600 to-pink-500 rounded-2xl p-5 relative overflow-hidden shadow-lg shadow-purple-500/20 block">
         <h2 className="text-yellow-300 text-3xl font-black italic mb-2 drop-shadow-md">HOT ROOM</h2>
-        <p className="text-white text-xs bg-white/20 inline-block px-3 py-1 rounded-full">View the ranking ▶</p>
+        <p className="text-white text-xs bg-white/20 inline-block px-3 py-1 rounded-full">View ranking ▶</p>
       </Btn>
       <div className="flex gap-5 px-5 pb-3 overflow-x-auto no-scrollbar border-b border-slate-800">
         {['All', 'Friends', 'PK', 'Music', 'Video', 'Game'].map((cat) => (
-          <Btn key={cat} onClick={() => setCurrentCat(cat)} className="relative pb-2 cursor-pointer whitespace-nowrap">
+          <Btn key={cat} onClick={() => setCurrentCat(cat)} className="relative pb-2 whitespace-nowrap">
             <span className={`text-sm font-semibold ${currentCat === cat ? 'text-white' : 'text-slate-400'}`}>{cat}</span>
             {currentCat === cat && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-1 bg-blue-500 rounded-full" />}
           </Btn>
@@ -734,10 +862,7 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
       </div>
       <div className="flex flex-col">
         {filteredRooms.length === 0 ? (
-          <div className="text-center py-10 text-slate-400 text-sm">
-            No rooms active right now. <br />
-            <Btn className="text-blue-400 cursor-pointer font-bold mt-2 inline-block text-lg" onClick={() => setSubView('create')}>+ Create a Room</Btn>
-          </div>
+          <div className="text-center py-10 text-slate-400 text-sm">No rooms active right now.<br /><Btn className="text-blue-400 font-bold mt-2 inline-block text-lg" onClick={() => setSubView('create')}>+ Create a Room</Btn></div>
         ) : filteredRooms.map((room) => {
           let tagClass = 'text-orange-500 bg-orange-500/10';
           if (room.tag === 'Music') tagClass = 'text-blue-500 bg-blue-500/10';
@@ -745,7 +870,7 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
           if (room.tag === 'PK') tagClass = 'text-red-500 bg-red-500/10';
           if (room.tag === 'Chats') tagClass = 'text-green-500 bg-green-500/10';
           return (
-            <Btn key={room.id} onClick={() => handleJoinClick(room)} className="w-full text-left flex items-center px-5 py-4 border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition">
+            <Btn key={room.id} onClick={() => handleJoinClick(room)} className="w-full text-left flex items-center px-5 py-4 border-b border-slate-800 hover:bg-slate-800/50">
               <div className="relative mr-4 shrink-0">
                 <UserAvatar src={room.ownerImg} name={room.ownerName} className="w-14 h-14 rounded-2xl shadow-md" />
                 {room.hasPassword && <span className="absolute -top-2 -right-2 text-sm bg-black/80 rounded-full p-1 border border-slate-600">🔒</span>}
@@ -795,37 +920,24 @@ const CreateRoomForm = ({ user, userProfile, onClose, onAdvanced, onJoin, onNoti
     setLoading(true);
     try {
       const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const newRoom = await db.collection('voiceRooms').add({
-        title: title.trim(), tag: selectedTag || 'Chats', roomCode, hasPassword, password: hasPassword ? password.trim() : null,
-        ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL,
-        createdAt: FV.serverTimestamp(), activeMembers: [], kicked: {}, blocked: [], mutedUsers: [],
-      });
+      const newRoom = await db.collection('voiceRooms').add({ title: title.trim(), tag: selectedTag || 'Chats', roomCode, hasPassword, password: hasPassword ? password.trim() : null, ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL, createdAt: FV.serverTimestamp(), activeMembers: [], kicked: {}, blocked: [], mutedUsers: [] });
       onJoin(newRoom.id);
-    } catch (err) { onNotice(`Error creating room: ${errMsg(err)}`); }
+    } catch (err) { onNotice(`Error: ${errMsg(err)}`); }
     setLoading(false);
   };
   return (
     <div className={C_FORM_SCR}>
-      <div className={C_FORM_HDR}>
-        <Btn onClick={onClose} aria-label="Close create room" className="absolute left-5 text-2xl text-slate-400 hover:text-white transition">✕</Btn>
-        <h1 className="text-lg font-bold text-white">Create Voice Room</h1>
-      </div>
+      <div className={C_FORM_HDR}><Btn onClick={onClose} className="absolute left-5 text-2xl text-slate-400">✕</Btn><h1 className="text-lg font-bold text-white">Create Voice Room</h1></div>
       <div className="p-5 flex-1 overflow-y-auto pb-28">
         <input type="text" placeholder="Enter room title" maxLength={25} className="w-full bg-[#0c0c10] border border-white/15 rounded-xl p-4 text-white outline-none focus:border-blue-500 mb-6" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-white font-medium">Password Lock</span>
-          <label className="relative inline-block w-12 h-6 cursor-pointer">
-            <input type="checkbox" className="opacity-0 w-0 h-0" checked={hasPassword} onChange={() => setHasPassword(!hasPassword)} />
-            <span className={`absolute top-0 left-0 right-0 bottom-0 rounded-full transition-colors ${hasPassword ? 'bg-blue-500' : 'bg-slate-600'}`}>
-              <span className={`absolute left-1 bottom-1 bg-white w-4 h-4 rounded-full transition-transform ${hasPassword ? 'translate-x-6' : ''}`} />
-            </span>
-          </label>
+        <div className="flex justify-between items-center mb-2"><span className="text-white font-medium">Password Lock</span>
+          <label className="relative inline-block w-12 h-6 cursor-pointer"><input type="checkbox" className="opacity-0 w-0 h-0" checked={hasPassword} onChange={() => setHasPassword(!hasPassword)} /><span className={`absolute top-0 left-0 right-0 bottom-0 rounded-full transition-colors ${hasPassword ? 'bg-blue-500' : 'bg-slate-600'}`}><span className={`absolute left-1 bottom-1 bg-white w-4 h-4 rounded-full transition-transform ${hasPassword ? 'translate-x-6' : ''}`} /></span></label>
         </div>
         {hasPassword && <input type="text" placeholder="Enter Room Password" maxLength={15} className="w-full bg-[#0c0c10] border border-blue-500 rounded-xl p-3 text-white outline-none mb-6" value={password} onChange={(e) => setPassword(e.target.value)} />}
         <div className="text-sm text-slate-400 mb-3 mt-4">Room mode</div>
         <div className="grid grid-cols-3 gap-3 mb-8">
           {modes.map((mode) => (
-            <Btn key={mode.name} onClick={() => setSelectedMode(mode.name)} className={`relative border rounded-xl p-3 text-center cursor-pointer transition ${selectedMode === mode.name ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}>
+            <Btn key={mode.name} onClick={() => setSelectedMode(mode.name)} className={`relative border rounded-xl p-3 text-center ${selectedMode === mode.name ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400'}`}>
               {mode.soon && <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">NEW</span>}
               <div className="text-lg mb-1">{mode.icon}</div><div className="text-xs font-semibold">{mode.name}</div>
             </Btn>
@@ -833,15 +945,11 @@ const CreateRoomForm = ({ user, userProfile, onClose, onAdvanced, onJoin, onNoti
         </div>
         <div className="text-sm text-slate-400 mb-3">Select Room Tag</div>
         <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-8">
-          {tags.map((tag) => (
-            <Btn key={tag} onClick={() => setSelectedTag(tag)} className={`px-5 py-2 rounded-full text-sm cursor-pointer whitespace-nowrap transition border ${selectedTag === tag ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}>{tag}</Btn>
-          ))}
+          {tags.map((tag) => (<Btn key={tag} onClick={() => setSelectedTag(tag)} className={`px-5 py-2 rounded-full text-sm whitespace-nowrap border ${selectedTag === tag ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400'}`}>{tag}</Btn>))}
         </div>
-        <Btn onClick={onAdvanced} className="w-full text-center text-yellow-500 font-semibold cursor-pointer py-2 mb-8">Create Advanced Voice Room &gt;</Btn>
+        <Btn onClick={onAdvanced} className="w-full text-center text-yellow-500 font-semibold py-2 mb-8">Create Advanced Voice Room &gt;</Btn>
       </div>
-      <div className={C_FORM_FTR}>
-        <Btn onClick={handleCreate} disabled={loading} className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-full shadow-lg shadow-blue-600/30 transition-all">{loading ? 'Creating...' : 'Create Room'}</Btn>
-      </div>
+      <div className={C_FORM_FTR}><Btn onClick={handleCreate} disabled={loading} className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-full shadow-lg">{loading ? 'Creating...' : 'Create Room'}</Btn></div>
     </div>
   );
 };
@@ -854,60 +962,37 @@ const AdvancedRoomForm = ({ user, userProfile, onClose, onJoin, onNotice }) => {
   const ids = ['1001', '2005', '8888', '5201', '9999'];
   const tags = ['Friends', 'Music', 'Game', 'Chats'];
   const cost = 1999;
-  const isAdmin = userProfile?.displayId === ADMIN_DISPLAY_ID;
+  const isAdmin = isOfficialDisplayId(userProfile?.displayId);
   const requestCreate = () => {
-    if (title.trim().length < 3 || !selectedId) return onNotice('Please select ID and enter title (min 3 chars)!');
-    if (!isAdmin && (userProfile.coins || 0) < cost) return onNotice('Insufficient balance! You need 1,999 coins.');
+    if (title.trim().length < 3 || !selectedId) return onNotice('Select ID and title (min 3 chars)!');
+    if (!isAdmin && (userProfile.coins || 0) < cost) return onNotice('Insufficient balance! Need 1,999 coins.');
     setConfirmOpen(true);
   };
   const handleConfirmCreate = async () => {
     setConfirmOpen(false);
     try {
       if (!isAdmin) await uDoc(user.uid).update({ coins: FV.increment(-cost) });
-      const newRoom = await db.collection('voiceRooms').add({
-        title: title.trim(), tag: selectedTag, roomCode: selectedId, isAdvanced: true,
-        ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL,
-        createdAt: FV.serverTimestamp(), activeMembers: [], kicked: {}, blocked: [], mutedUsers: [],
-      });
+      const newRoom = await db.collection('voiceRooms').add({ title: title.trim(), tag: selectedTag, roomCode: selectedId, isAdvanced: true, ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL, createdAt: FV.serverTimestamp(), activeMembers: [], kicked: {}, blocked: [], mutedUsers: [] });
       onJoin(newRoom.id);
-    } catch (err) { onNotice(`Error creating room: ${errMsg(err)}`); }
+    } catch (err) { onNotice(`Error: ${errMsg(err)}`); }
   };
   return (
     <div className={C_FORM_SCR}>
-      <div className={C_FORM_HDR}>
-        <Btn onClick={onClose} aria-label="Close advanced room" className="absolute left-5 text-2xl text-slate-400 hover:text-white transition">✕</Btn>
-        <h1 className="text-lg font-bold text-yellow-500">Advanced Room</h1>
-      </div>
+      <div className={C_FORM_HDR}><Btn onClick={onClose} className="absolute left-5 text-2xl text-slate-400">✕</Btn><h1 className="text-lg font-bold text-yellow-500">Advanced Room</h1></div>
       <div className="p-5 flex-1 overflow-y-auto pb-28">
         <div className="text-sm font-bold text-white mb-3">Select Room ID (Permanent)</div>
-        <div className="grid grid-cols-3 gap-2 mb-6">
-          {ids.map((id) => (
-            <Btn key={id} onClick={() => setSelectedId(id)} className={`border-2 rounded-xl p-3 text-center font-bold text-lg cursor-pointer transition ${selectedId === id ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500' : 'border-slate-700 text-slate-400'}`}>{id}</Btn>
-          ))}
-        </div>
+        <div className="grid grid-cols-3 gap-2 mb-6">{ids.map((id) => (<Btn key={id} onClick={() => setSelectedId(id)} className={`border-2 rounded-xl p-3 text-center font-bold text-lg ${selectedId === id ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500' : 'border-slate-700 text-slate-400'}`}>{id}</Btn>))}</div>
         <div className="text-sm font-bold text-white mb-3 mt-6">Room Title</div>
         <input type="text" placeholder="Enter room title" className="w-full bg-[#0c0c10] border border-white/15 rounded-xl p-4 text-white outline-none focus:border-yellow-500 mb-6" value={title} onChange={(e) => setTitle(e.target.value)} />
         <div className="text-sm font-bold text-white mb-3">Room Tag</div>
-        <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-8">
-          {tags.map((tag) => (
-            <Btn key={tag} onClick={() => setSelectedTag(tag)} className={`px-5 py-2 rounded-full text-sm cursor-pointer whitespace-nowrap transition border ${selectedTag === tag ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}>{tag}</Btn>
-          ))}
-        </div>
+        <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-8">{tags.map((tag) => (<Btn key={tag} onClick={() => setSelectedTag(tag)} className={`px-5 py-2 rounded-full text-sm whitespace-nowrap border ${selectedTag === tag ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500' : 'border-slate-700 text-slate-400'}`}>{tag}</Btn>))}</div>
       </div>
-      <div className={C_FORM_FTR}>
-        <Btn onClick={requestCreate} className="w-full bg-yellow-500 text-black font-bold text-lg py-3.5 rounded-full shadow-lg shadow-yellow-500/30 transition-all">Create for 🪙 1,999</Btn>
-      </div>
+      <div className={C_FORM_FTR}><Btn onClick={requestCreate} className="w-full bg-yellow-500 text-black font-bold text-lg py-3.5 rounded-full shadow-lg">Create for 🪙 1,999</Btn></div>
       {confirmOpen && (
-        <div className={C_MOD_OVL}>
-          <div className="bg-[#0c0c10] p-5 rounded-2xl w-full max-w-xs border border-white/15 text-center">
-            <h3 className="text-base font-bold text-white mb-2">Confirm Creation</h3>
-            <p className="text-sm text-slate-300 mb-4">Create Permanent Room ID {selectedId} for 🪙 1,999?</p>
-            <div className="flex gap-2">
-              <Btn onClick={() => setConfirmOpen(false)} className={C_BTN_S}>Cancel</Btn>
-              <Btn onClick={handleConfirmCreate} className="flex-1 bg-yellow-500 text-black py-2 rounded-xl font-bold text-sm">Confirm</Btn>
-            </div>
-          </div>
-        </div>
+        <div className={C_MOD_OVL}><div className="bg-[#0c0c10] p-5 rounded-2xl w-full max-w-xs border border-white/15 text-center">
+          <h3 className="text-base font-bold text-white mb-2">Confirm Creation</h3><p className="text-sm text-slate-300 mb-4">Create Permanent Room ID {selectedId} for 🪙 1,999?</p>
+          <div className="flex gap-2"><Btn onClick={() => setConfirmOpen(false)} className={C_BTN_S}>Cancel</Btn><Btn onClick={handleConfirmCreate} className="flex-1 bg-yellow-500 text-black py-2 rounded-xl font-bold text-sm">Confirm</Btn></div>
+        </div></div>
       )}
     </div>
   );
@@ -922,15 +1007,9 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
   const [searchError, setSearchError] = useState('');
   const [acceptedIds, setAcceptedIds] = useState([]);
   useEffect(() => {
-    if (demoMode) {
-      setFriends(demoFriends || []);
-      setRequests((demoRequests || []).filter((r) => !acceptedIds.includes(r.uid)));
-      setLoading(false);
-      return;
-    }
+    if (demoMode) { setFriends(demoFriends || []); setRequests((demoRequests || []).filter((r) => !acceptedIds.includes(r.uid))); setLoading(false); return; }
     const unsub = db.collection('users').onSnapshot((snap) => {
-      const friendsList = [];
-      const reqList = [];
+      const friendsList = []; const reqList = [];
       snap.forEach((doc) => {
         const data = { uid: doc.id, ...doc.data() };
         if (userProfile?.friends?.includes(doc.id) || acceptedIds.includes(doc.id)) friendsList.push(data);
@@ -948,15 +1027,12 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
     onNotice?.(`Accepted ${reqUser.displayName}'s friend request!`);
     if (demoMode) { onDemoAcceptRequest?.(requesterId); return; }
     try {
-      await Promise.all([
-        uDoc(user.uid).update({ friends: FV.arrayUnion(requesterId), requests: FV.arrayRemove(requesterId) }),
-        uDoc(requesterId).update({ friends: FV.arrayUnion(user.uid), sentRequests: FV.arrayRemove(user.uid) }),
-      ]);
+      await Promise.all([uDoc(user.uid).update({ friends: FV.arrayUnion(requesterId), requests: FV.arrayRemove(requesterId) }), uDoc(requesterId).update({ friends: FV.arrayUnion(user.uid), sentRequests: FV.arrayRemove(user.uid) })]);
     } catch (err) {
       setAcceptedIds((prev) => prev.filter((id) => id !== requesterId));
       setRequests((prev) => (prev.some((r) => r.uid === requesterId) ? prev : [reqUser, ...prev]));
       setFriends((prev) => prev.filter((f) => f.uid !== requesterId));
-      onNotice?.(`Failed to accept request: ${errMsg(err, 'Network error')}`);
+      onNotice?.(`Failed: ${errMsg(err, 'Network error')}`);
     }
   };
   const handleSearch = async () => {
@@ -982,17 +1058,12 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
         <Btn onClick={() => setShowSearch(true)} className="bg-[var(--color-rose)] px-3.5 py-2 rounded-full text-sm font-bold flex items-center gap-1 text-white min-h-[40px]">🔍 Add Friend</Btn>
       </div>
       {showSearch && (
-        <div className={C_MOD_OVL}>
-          <div className="bg-[#0c0c10] p-6 rounded-2xl w-full max-w-sm border border-white/15">
-            <h3 className="text-lg font-bold text-white mb-4">Search by ID</h3>
-            <input type="text" placeholder="Enter 9-digit ID" className="w-full bg-black border border-slate-700 rounded-lg px-4 py-3 text-white mb-2 outline-none focus:border-[var(--color-rose)]" value={searchId} onChange={(e) => setSearchId(e.target.value)} />
-            {searchError && <p className="text-red-400 text-xs mb-2">{searchError}</p>}
-            <div className="flex gap-2 mt-2">
-              <Btn onClick={() => setShowSearch(false)} className="flex-1 bg-slate-800 text-white py-2.5 rounded-lg font-bold">Cancel</Btn>
-              <Btn onClick={handleSearch} className="flex-1 bg-[var(--color-rose)] text-white py-2.5 rounded-lg font-bold">Search</Btn>
-            </div>
-          </div>
-        </div>
+        <div className={C_MOD_OVL}><div className="bg-[#0c0c10] p-6 rounded-2xl w-full max-w-sm border border-white/15">
+          <h3 className="text-lg font-bold text-white mb-4">Search by ID</h3>
+          <input type="text" placeholder="Enter 9-digit ID" className="w-full bg-black border border-slate-700 rounded-lg px-4 py-3 text-white mb-2 outline-none focus:border-[var(--color-rose)]" value={searchId} onChange={(e) => setSearchId(e.target.value)} />
+          {searchError && <p className="text-red-400 text-xs mb-2">{searchError}</p>}
+          <div className="flex gap-2 mt-2"><Btn onClick={() => setShowSearch(false)} className="flex-1 bg-slate-800 text-white py-2.5 rounded-lg font-bold">Cancel</Btn><Btn onClick={handleSearch} className="flex-1 bg-[var(--color-rose)] text-white py-2.5 rounded-lg font-bold">Search</Btn></div>
+        </div></div>
       )}
       {requests.length > 0 && (
         <div className="mb-6">
@@ -1003,12 +1074,9 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
               <div key={req.uid} className="bg-[#0c0c10] p-3 rounded-xl flex items-center justify-between mb-2 border border-white/10">
                 <Btn onClick={() => openProfile(req)} className="flex items-center gap-3 text-left min-w-0 flex-1">
                   <AvatarDot src={req.photoURL} name={req.displayName} online={online} />
-                  <div className="min-w-0">
-                    <p className="font-bold text-sm text-white truncate">{req.displayName}</p>
-                    <p className="text-[11px] flex items-center gap-1 text-slate-400"><span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-slate-400'}`} /><span>{online ? 'Online' : 'Offline'}</span></p>
-                  </div>
+                  <div className="min-w-0"><p className="font-bold text-sm text-white truncate">{req.displayName}</p><p className="text-[11px] flex items-center gap-1 text-slate-400"><span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-slate-400'}`} /><span>{online ? 'Online' : 'Offline'}</span></p></div>
                 </Btn>
-                <Btn onClick={() => acceptRequest(req)} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full min-h-[36px] shrink-0 transition-colors">Accept</Btn>
+                <Btn onClick={() => acceptRequest(req)} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full min-h-[36px] shrink-0">Accept</Btn>
               </div>
             );
           })}
@@ -1021,20 +1089,21 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
         <ul className="space-y-3">
           {friends.map((u) => {
             const online = isUserOnline(u);
+            const activeTitles = getActiveTitles(u.titles);
             return (
               <li key={u.uid}>
-                <div className="w-full p-3 bg-[#0c0c10] rounded-xl flex items-center gap-3 border border-white/10 hover:bg-white/5 transition">
-                  <Btn onClick={() => openProfile(u)} aria-label={`View ${u.displayName}'s profile`} className="relative shrink-0">
-                    <AvatarDot src={u.photoURL} name={u.displayName} online={online} cls="w-12 h-12 rounded-full" dotCls="w-3.5 h-3.5" />
-                  </Btn>
+                <div className="w-full p-3 bg-[#0c0c10] rounded-xl flex items-center gap-3 border border-white/10 hover:bg-white/5">
+                  <Btn onClick={() => openProfile(u)} className="relative shrink-0"><AvatarDot src={u.photoURL} name={u.displayName} online={online} cls="w-12 h-12 rounded-full" dotCls="w-3.5 h-3.5" /></Btn>
                   <Btn onClick={() => openChat(u)} className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-bold text-white flex items-center gap-1.5 truncate">
                         <span className="truncate">{u.displayName}</span>
-                        {u.displayId === ADMIN_DISPLAY_ID && <span className="star-official-badge text-[8px] px-1.5 py-0.5 rounded shrink-0">⭐ Star</span>}
+                        {isOfficialDisplayId(u.displayId) && <span className="star-official-badge text-[8px] px-1.5 py-0.5 rounded shrink-0">⭐ Star</span>}
+                        {u.isAdmin && !isOfficialDisplayId(u.displayId) && u.showAdminBadge !== false && <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[8px] px-1.5 py-0.5 rounded shrink-0">Admin</span>}
                       </p>
                       <OnlineBadge online={online} />
                     </div>
+                    {activeTitles.length > 0 && <div className="flex flex-wrap gap-1 mt-0.5">{activeTitles.slice(0, 2).map((t) => <TitleBadge key={t.id} title={t} />)}</div>}
                     <p className="text-xs text-slate-400 mt-0.5">ID: {u.displayId}</p>
                   </Btn>
                 </div>
@@ -1047,7 +1116,7 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
   );
 };
 
-const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) => {
+const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, demoMode }) => {
   const { chatId, otherUser } = chatData;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
@@ -1056,6 +1125,7 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const online = isUserOnline(otherUser);
+  const isOfficial = isOfficialDisplayId(userProfile?.displayId);
   useEffect(() => {
     if (demoMode) { setMessages([{ id: 'demo-m1', type: 'text', text: 'Hey! Welcome to World Star.', senderId: otherUser.uid }]); return; }
     const unsub = db.collection('chats').doc(chatId).collection('messages').orderBy('createdAt', 'asc').onSnapshot((snap) => {
@@ -1064,7 +1134,7 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
     });
     return () => unsub();
   }, [chatId, demoMode, otherUser.uid]);
-  const isBlocked = !canSendDirectMessage(messages, user.uid, otherUser.uid);
+  const isBlocked = !isOfficial && !canSendDirectMessage(messages, user.uid, otherUser.uid);
   const send = async (e) => {
     e.preventDefault();
     if (!text.trim() || isBlocked || uploading) return;
@@ -1085,23 +1155,20 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
   };
   const handleRecall = async () => {
     if (!selectedMsg || selectedMsg.senderId !== user.uid) return;
-    if (demoMode) { setMessages(prev => prev.filter(m => m.id !== selectedMsg.id)); setSelectedMsg(null); return; }
-    try {
-      await db.collection('chats').doc(chatId).collection('messages').doc(selectedMsg.id).delete();
-      setSelectedMsg(null);
-      onNotice('Message recalled.');
-    } catch(e) { onNotice('Failed to recall.'); }
+    if (demoMode) { setMessages((prev) => prev.filter((m) => m.id !== selectedMsg.id)); setSelectedMsg(null); return; }
+    try { await db.collection('chats').doc(chatId).collection('messages').doc(selectedMsg.id).delete(); setSelectedMsg(null); onNotice('Message recalled.'); }
+    catch { onNotice('Failed to recall.'); }
   };
   return (
     <div className="fixed inset-0 z-[2000] flex flex-col bg-[#000000] text-white max-w-[430px] mx-auto">
       <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-[#0c0c10] shrink-0 shadow-md">
-        <Btn onClick={onBack} aria-label="Back to chats" className="text-white text-2xl font-bold px-2">←</Btn>
-        <Btn className="flex items-center gap-2.5 cursor-pointer text-left" onClick={() => openProfile(otherUser)}>
+        <Btn onClick={onBack} className="text-white text-2xl font-bold px-2">←</Btn>
+        <Btn className="flex items-center gap-2.5 text-left" onClick={() => openProfile(otherUser)}>
           <AvatarDot src={otherUser?.photoURL} name={otherUser?.displayName} online={online} cls="w-10 h-10 rounded-full border border-slate-600" />
           <div>
             <p className="font-bold text-white text-base leading-tight flex items-center gap-2">
               {otherUser?.displayName}
-              {otherUser?.displayId === ADMIN_DISPLAY_ID ? null : <CharmIcon charms={otherUser?.charms || 0} size="text-sm" />}
+              {!isOfficialDisplayId(otherUser?.displayId) && <CharmIcon charms={otherUser?.charms || 0} size="text-sm" />}
             </p>
             <OnlineBadge online={online} />
           </div>
@@ -1124,21 +1191,17 @@ const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) =
         <div className="p-4 bg-red-500/10 border-t border-red-500/30 text-center shrink-0"><p className="text-red-400 text-sm font-bold">Message limit reached (3). Wait for a reply to continue.</p></div>
       ) : (
         <form onSubmit={send} className="p-3 bg-[#0c0c10] border-t border-white/10 flex gap-2 shrink-0">
-          <Btn aria-label="Send image" onClick={() => fileInputRef.current?.click()} className="bg-[#1a1a22] text-white w-11 h-11 rounded-full flex items-center justify-center border border-white/10 shrink-0">📷</Btn>
+          <Btn onClick={() => fileInputRef.current?.click()} className="bg-[#1a1a22] text-white w-11 h-11 rounded-full flex items-center justify-center border border-white/10 shrink-0">📷</Btn>
           <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageUpload} />
           <input className="flex-1 bg-black border border-white/15 rounded-full px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[var(--color-rose)]" placeholder={uploading ? 'Uploading...' : 'Type a message...'} value={text} onChange={(e) => setText(e.target.value)} disabled={uploading} />
-          <Btn type="submit" aria-label="Send message" className="bg-[var(--color-rose)] text-white w-11 h-11 rounded-full font-bold flex items-center justify-center shrink-0">➤</Btn>
+          <Btn type="submit" className="bg-[var(--color-rose)] text-white w-11 h-11 rounded-full font-bold flex items-center justify-center shrink-0">➤</Btn>
         </form>
       )}
       {selectedMsg && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4" onClick={() => setSelectedMsg(null)}>
-          <div className="bg-[#1a1a22] rounded-2xl p-5 w-full max-w-xs border border-white/10" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#1a1a22] rounded-2xl p-5 w-full max-w-xs border border-white/10" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-white font-bold mb-4 text-center">Message Options</h3>
-            {selectedMsg.senderId === user.uid ? (
-              <Btn onClick={handleRecall} className="w-full bg-red-500 text-white py-3 rounded-xl font-bold mb-2">Recall Message</Btn>
-            ) : (
-              <p className="text-slate-400 text-center text-sm mb-4">You can only recall your own messages.</p>
-            )}
+            {selectedMsg.senderId === user.uid ? <Btn onClick={handleRecall} className="w-full bg-red-500 text-white py-3 rounded-xl font-bold mb-2">Recall Message</Btn> : <p className="text-slate-400 text-center text-sm mb-4">You can only recall your own messages.</p>}
             <Btn onClick={() => setSelectedMsg(null)} className="w-full bg-slate-700 text-white py-2 rounded-xl font-bold">Cancel</Btn>
           </div>
         </div>
@@ -1154,10 +1217,10 @@ const MicSeat = ({ label, seatedUser, isMine, isOwnerSeat, isLive, isMutedInRoom
   const displayName = isMine ? 'You' : seatedUser?.name;
   return (
     <div className="seat-col">
-      <Btn aria-label={seatedUser ? `${displayName} on ${label}` : `Take ${label}`} className={`seat ${isLive ? 'is-live' : ''} ${isOwnerSeat && !isLive ? 'is-owner' : ''}`} onClick={onTake} onMouseDown={seatedUser ? onLongPressStart : undefined} onMouseUp={onLongPressEnd} onMouseLeave={onLongPressEnd} onTouchStart={seatedUser ? onLongPressStart : undefined} onTouchEnd={onLongPressEnd}>
+      <Btn className={`seat ${isLive ? 'is-live' : ''} ${isOwnerSeat && !isLive ? 'is-owner' : ''}`} onClick={onTake} onMouseDown={seatedUser ? onLongPressStart : undefined} onMouseUp={onLongPressEnd} onMouseLeave={onLongPressEnd} onTouchStart={seatedUser ? onLongPressStart : undefined} onTouchEnd={onLongPressEnd}>
         {seatedUser ? (showImg ? <img src={seatedUser.img} alt={displayName || 'Speaker'} referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full rounded-full object-cover" /> : <span className="you-face">{(seatedUser.name || 'Y').charAt(0).toUpperCase()}</span>) : <PlusIcon />}
-        {seatedUser && isOwnerSeat && <span aria-hidden="true" className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs leading-none drop-shadow" title="Room Owner">👑</span>}
-        {seatedUser && isMutedInRoom && <span aria-label="Muted" className="absolute -top-1 -right-1 text-[10px] bg-[#ff2a45] text-white rounded-full px-1 py-0.5 leading-none shadow">🔇</span>}
+        {seatedUser && isOwnerSeat && <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs leading-none drop-shadow">👑</span>}
+        {seatedUser && isMutedInRoom && <span className="absolute -top-1 -right-1 text-[10px] bg-[#ff2a45] text-white rounded-full px-1 py-0.5 leading-none shadow">🔇</span>}
       </Btn>
       {seatedUser && <div className="seat-name">{displayName}</div>}
     </div>
@@ -1169,9 +1232,7 @@ const playGiftSound = (url) => {
   try { const audio = new Audio(url); audio.volume = 0.5; audio.play().catch(() => {}); } catch {}
 };
 
-const RoomInterface = ({
-  roomId, user, userProfile, onMinimize, onLeave, onViewProfile, demoMode = false, onUpdateLocalCoins, onUpdateLocalCharms, onDemoGiftReceived,
-}) => {
+const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewProfile, demoMode = false, onUpdateLocalCoins, onUpdateLocalCharms, onDemoGiftReceived }) => {
   const [roomData, setRoomData] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -1191,20 +1252,20 @@ const RoomInterface = ({
   const [toast, setToast] = useState(null);
   const [joinedAt, setJoinedAt] = useState(Date.now());
   const lastGiftIdRef = useRef(null);
+  const giftAnimTimerRef = useRef(null);
   const chatEndRef = useRef(null);
   const longPressTimer = useRef(null);
   const micStreamRef = useRef(null);
-  const isAdmin = userProfile?.displayId === ADMIN_DISPLAY_ID;
+  const isAdmin = isOfficialDisplayId(userProfile?.displayId);
   const isOwner = user?.uid === roomData?.ownerId;
   const myMember = roomData?.activeMembers?.find((m) => m.uid === user?.uid);
   const isSeated = Boolean(myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined);
   const notify = (msg) => { setToast(msg); setTimeout(() => setToast((prev) => (prev === msg ? null : prev)), 2600); };
-
-  // FIX: Use a ref for onLeave to prevent re-triggering the effect on every render
   const onLeaveRef = useRef(onLeave);
   useEffect(() => { onLeaveRef.current = onLeave; }, [onLeave]);
-
   useEffect(() => { setLiveCoins(Number(userProfile.coins) || 0); }, [userProfile.coins]);
+
+  // Mic stream
   useEffect(() => {
     let active = true;
     if (navigator.mediaDevices?.getUserMedia) {
@@ -1213,10 +1274,7 @@ const RoomInterface = ({
         micStreamRef.current = stream;
       }).catch(() => {});
     }
-    return () => {
-      active = false;
-      if (micStreamRef.current) { micStreamRef.current.getTracks().forEach((t) => t.stop()); micStreamRef.current = null; }
-    };
+    return () => { active = false; if (micStreamRef.current) { micStreamRef.current.getTracks().forEach((t) => t.stop()); micStreamRef.current = null; } };
   }, []);
   useEffect(() => {
     const stream = micStreamRef.current;
@@ -1225,19 +1283,12 @@ const RoomInterface = ({
     stream.getAudioTracks().forEach((track) => { track.enabled = shouldEnable; });
   }, [isSeated, isMuted, roomData?.mutedUsers, user.uid]);
   useEffect(() => { document.querySelectorAll('audio').forEach((el) => { el.muted = isSpeakerMuted; }); }, [isSpeakerMuted]);
+
+  // Demo init / gifts settings
   useEffect(() => {
     if (demoMode) {
-      setRoomData({
-        id: roomId, title: "Zelda's chill lounge", tag: 'Chats', roomCode: '520188',
-        ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL,
-        activeMembers: [{ uid: 'u1', name: 'Rahul', img: '', seatIndex: 2 }, { uid: 'u2', name: 'Sonia', img: '', seatIndex: 5 }, { uid: user.uid, name: userProfile.displayName, img: userProfile.photoURL, seatIndex: null }],
-        kicked: {}, blocked: [], mutedUsers: [],
-      });
-      setMessages([
-        { id: 'sys-1', isSystem: true, text: 'Welcome to the voice room.' },
-        { id: 'msg-1', senderId: 'u1', senderName: 'Rahul', text: 'Hey everyone, grab a mic seat!' },
-        { id: 'msg-2', senderId: 'u2', senderName: 'Sonia', text: 'Sound check is live.' },
-      ]);
+      setRoomData({ id: roomId, title: "Zelda's chill lounge", tag: 'Chats', roomCode: '520188', ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL, activeMembers: [{ uid: 'u1', name: 'Rahul', img: '', seatIndex: 2, lastSeen: Date.now() }, { uid: 'u2', name: 'Sonia', img: '', seatIndex: 5, lastSeen: Date.now() }, { uid: user.uid, name: userProfile.displayName, img: userProfile.photoURL, seatIndex: null, lastSeen: Date.now() }], kicked: {}, blocked: [], mutedUsers: [] });
+      setMessages([{ id: 'sys-1', isSystem: true, text: 'Welcome to the voice room.' }, { id: 'msg-1', senderId: 'u1', senderName: 'Rahul', text: 'Hey everyone, grab a mic seat!' }, { id: 'msg-2', senderId: 'u2', senderName: 'Sonia', text: 'Sound check is live.' }]);
       return;
     }
     const unsubGifts = db.collection('settings').doc('gifts').onSnapshot((doc) => {
@@ -1248,6 +1299,7 @@ const RoomInterface = ({
     return () => { unsubGifts(); unsubMyCoins(); };
   }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]);
 
+  // Join room
   useEffect(() => {
     if (demoMode) return;
     const roomRef = rDoc(roomId);
@@ -1274,13 +1326,13 @@ const RoomInterface = ({
       if (data.blocked && data.blocked.includes(user.uid)) { onLeaveRef.current(); return; }
       setRoomData(data);
       if (data.announcement) setAnnouncementText(data.announcement);
-      
       // Global Gift Animation
       if (data.latestGift && data.latestGift.animId !== lastGiftIdRef.current) {
         lastGiftIdRef.current = data.latestGift.animId;
         setGiftAnim(data.latestGift);
         playGiftSound(data.latestGift.sound);
-        setTimeout(() => setGiftAnim(null), 3500);
+        if (giftAnimTimerRef.current) clearTimeout(giftAnimTimerRef.current);
+        giftAnimTimerRef.current = setTimeout(() => setGiftAnim(null), 3500);
       }
     });
     const unsubMsg = roomRef.collection('messages').orderBy('createdAt', 'asc').onSnapshot((snap) => {
@@ -1288,6 +1340,7 @@ const RoomInterface = ({
     });
     return () => {
       active = false; unsubRoom(); unsubMsg();
+      if (giftAnimTimerRef.current) clearTimeout(giftAnimTimerRef.current);
       if (joined) {
         roomRef.get().then((doc) => {
           if (!doc.exists) return;
@@ -1300,7 +1353,65 @@ const RoomInterface = ({
         }).catch(() => {});
       }
     };
-  }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]); // FIX: Removed onLeave from deps
+  }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]);
+
+  // ============ HEARTBEAT & STALE CLEANUP (BUG FIX: offline auto-leave) ============
+  useEffect(() => {
+    if (demoMode) return;
+    const hb = setInterval(() => {
+      db.runTransaction(async (tx) => {
+        const ref = rDoc(roomId);
+        const doc = await tx.get(ref);
+        if (!doc.exists) return;
+        const data = doc.data();
+        const members = data.activeMembers || [];
+        if (!members.some((m) => m.uid === user.uid)) return;
+        const updated = members.map((m) => (m.uid === user.uid ? { ...m, lastSeen: Date.now() } : m));
+        tx.update(ref, { activeMembers: updated });
+      }).catch(() => {});
+    }, 20000);
+    const cleanup = setInterval(() => {
+      db.runTransaction(async (tx) => {
+        const ref = rDoc(roomId);
+        const doc = await tx.get(ref);
+        if (!doc.exists) return;
+        const data = doc.data();
+        const now = Date.now();
+        const members = data.activeMembers || [];
+        const staleUids = members.filter((m) => m.uid !== user.uid && (now - (m.lastSeen || 0)) >= 70000).map((m) => m.uid);
+        if (staleUids.length === 0) return;
+        let current = members;
+        let ownerUid = data.ownerId, ownerName = data.ownerName, ownerImg = data.ownerImg;
+        for (const uid of staleUids) {
+          const res = removeMemberOnLeave(current, uid, ownerUid);
+          if (res.shouldDeleteRoom) { tx.delete(ref); return; }
+          current = res.nextMembers;
+          if (res.nextOwner) { ownerUid = res.nextOwner.uid; ownerName = res.nextOwner.name; ownerImg = res.nextOwner.img; }
+        }
+        tx.update(ref, { activeMembers: current, ownerId: ownerUid, ownerName, ownerImg });
+      }).catch(() => {});
+    }, 30000);
+    return () => { clearInterval(hb); clearInterval(cleanup); };
+  }, [roomId, user.uid, demoMode]);
+
+  // Page close handler (best effort)
+  useEffect(() => {
+    if (demoMode) return;
+    const handler = () => {
+      rDoc(roomId).get().then((doc) => {
+        if (!doc.exists) return;
+        const data = doc.data();
+        const res = removeMemberOnLeave(data.activeMembers || [], user.uid, data.ownerId);
+        if (res.shouldDeleteRoom) return rDoc(roomId).delete();
+        const updates = { activeMembers: res.nextMembers };
+        if (res.nextOwner) { updates.ownerId = res.nextOwner.uid; updates.ownerName = res.nextOwner.name; updates.ownerImg = res.nextOwner.img; }
+        return rDoc(roomId).update(updates);
+      }).catch(() => {});
+    };
+    window.addEventListener('pagehide', handler);
+    window.addEventListener('beforeunload', handler);
+    return () => { window.removeEventListener('pagehide', handler); window.removeEventListener('beforeunload', handler); };
+  }, [roomId, user.uid, demoMode]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages]);
 
@@ -1311,7 +1422,7 @@ const RoomInterface = ({
   const handleSeatClick = async (seatIndex, seatedUser) => {
     if (!roomData) return;
     if (seatedUser) { setSelectedUser(seatedUser); setSheet('profile'); return; }
-    if (myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined) { notify('You are already seated! Lift up from your seat first.'); return; }
+    if (myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined) { notify('You are already seated!'); return; }
     const updatedMembers = assignSeatToMember(roomData.activeMembers || [], user.uid, seatIndex);
     if (demoMode) { setRoomData({ ...roomData, activeMembers: updatedMembers }); return; }
     await rDoc(roomId).update({ activeMembers: updatedMembers });
@@ -1329,7 +1440,7 @@ const RoomInterface = ({
     if (demoMode) {
       const target = roomData.activeMembers.find((m) => m.uid === uid);
       setRoomData({ ...roomData, activeMembers: roomData.activeMembers.filter((m) => m.uid !== uid), kicked: { ...(roomData.kicked || {}), [uid]: Date.now() } });
-      if (target) pushSystemLocal(`${target.name} was kicked from the room.`);
+      if (target) pushSystemLocal(`${target.name} was kicked.`);
       return;
     }
     await rDoc(roomId).update({ [`kicked.${uid}`]: Date.now() });
@@ -1339,25 +1450,21 @@ const RoomInterface = ({
   const blockUser = async (uid) => {
     if (!roomData) return;
     setSheet(null);
-    if (demoMode) { setRoomData({ ...roomData, activeMembers: roomData.activeMembers.filter((m) => m.uid !== uid), blocked: [...(roomData.blocked || []), uid] }); notify('User blocked from room.'); return; }
+    if (demoMode) { setRoomData({ ...roomData, activeMembers: roomData.activeMembers.filter((m) => m.uid !== uid), blocked: [...(roomData.blocked || []), uid] }); notify('User blocked.'); return; }
     await rDoc(roomId).update({ blocked: FV.arrayUnion(uid) });
-    await kickUser(uid); notify('User blocked from room.');
+    await kickUser(uid); notify('User blocked.');
   };
   const toggleMute = async (uid) => {
     if (!roomData) return;
     const isCurrentlyMuted = roomData.mutedUsers?.includes(uid);
     setSheet(null);
-    if (demoMode) {
-      setRoomData({ ...roomData, mutedUsers: isCurrentlyMuted ? (roomData.mutedUsers || []).filter((id) => id !== uid) : [...(roomData.mutedUsers || []), uid] });
-      notify(isCurrentlyMuted ? 'User unmuted.' : 'User muted.');
-      return;
-    }
+    if (demoMode) { setRoomData({ ...roomData, mutedUsers: isCurrentlyMuted ? (roomData.mutedUsers || []).filter((id) => id !== uid) : [...(roomData.mutedUsers || []), uid] }); notify(isCurrentlyMuted ? 'Unmuted.' : 'Muted.'); return; }
     await rDoc(roomId).update({ mutedUsers: isCurrentlyMuted ? FV.arrayRemove(uid) : FV.arrayUnion(uid) });
-    notify(isCurrentlyMuted ? 'User unmuted.' : 'User muted.');
+    notify(isCurrentlyMuted ? 'Unmuted.' : 'Muted.');
   };
   const handlePressStart = (name) => { longPressTimer.current = setTimeout(() => setInputText((prev) => `${prev}@${name} `), 600); };
   const handlePressEnd = () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
-  const handleMicClick = () => { if (!isSeated) { notify('Take a mic seat first to speak!'); return; } setIsMuted((m) => !m); };
+  const handleMicClick = () => { if (!isSeated) { notify('Take a mic seat first!'); return; } setIsMuted((m) => !m); };
   const sendMsg = async (customText) => {
     const payload = (customText ?? inputText).trim();
     if (!payload) return;
@@ -1373,9 +1480,8 @@ const RoomInterface = ({
   const sendGift = async (giftToSend) => {
     const gift = giftToSend || selectedGift;
     const target = giftTargetUser || roomData?.activeMembers?.find((m) => m.uid !== user.uid) || roomData?.activeMembers?.[0] || null;
-    if (!gift) return notify('Select a gift first!');
-    if (!target) return notify('Select a user to send the gift!');
-    if (target.uid === ADMIN_DISPLAY_ID) return notify('You cannot send gifts to the Official Account.');
+    if (!gift) return notify('Select a gift!');
+    if (!target) return notify('Select a user!');
     if (!isAdmin && liveCoins < gift.p) return notify('Not enough coins.');
     try {
       const isSelfGift = target.uid === user.uid;
@@ -1383,35 +1489,31 @@ const RoomInterface = ({
       const giftRecord = { giftId: gift.id || 'custom', giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji' };
       const targetRef = uDoc(target.uid);
       if (demoMode) {
-        if (!isAdmin) {
-          const nextCoins = Math.max(0, liveCoins - gift.p);
-          setLiveCoins(nextCoins);
-          onUpdateLocalCoins?.(nextCoins);
-        }
-        onDemoGiftReceived?.(target.uid, {
-          id: `dg-${Date.now()}`, ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: Date.now()
-        });
+        if (!isAdmin) { const nextCoins = Math.max(0, liveCoins - gift.p); setLiveCoins(nextCoins); onUpdateLocalCoins?.(nextCoins); }
+        onDemoGiftReceived?.(target.uid, { id: `dg-${Date.now()}`, ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: Date.now() });
         setGiftAnim(gift);
         playGiftSound(gift.sound);
-        setTimeout(() => setGiftAnim(null), 3500);
+        if (giftAnimTimerRef.current) clearTimeout(giftAnimTimerRef.current);
+        giftAnimTimerRef.current = setTimeout(() => setGiftAnim(null), 3500);
       } else {
         if (!isAdmin) await uDoc(user.uid).update({ coins: FV.increment(-gift.p) });
         await targetRef.collection('receivedGifts').add({ ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: FV.serverTimestamp() });
         await targetRef.update({ charms: FV.increment(charmsEarned), coins: FV.increment(coinsEarned) });
-        
-        // Save latest gift to room for global animation
+        // Global gift animation — include BOTH field naming schemes for backward compat
         await rDoc(roomId).update({
           latestGift: {
-            animId: Date.now(), giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji', anim: gift.anim || 'float', sound: gift.sound || '', senderName: userProfile.displayName
+            animId: Date.now(),
+            n: gift.n, i: gift.i, type: gift.type || 'emoji',
+            giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji',
+            anim: gift.anim || 'float', sound: gift.sound || '',
+            senderName: userProfile.displayName
           }
         });
       }
       await pushSystemLocal(`${userProfile.displayName} sent ${gift.n} to ${isSelfGift ? 'themselves' : target.name}. Receiver got ${charmsEarned} Charms and ${coinsEarned} Coins!`);
-      setSheet(null); 
+      setSheet(null);
       setSelectedGift(null);
-    } catch (error) {
-      notify(`Error sending gift: ${errMsg(error)}`);
-    }
+    } catch (error) { notify(`Error: ${errMsg(error)}`); }
   };
 
   if (!roomData) return <div className="room flex items-center justify-center text-white font-bold">Joining Room...</div>;
@@ -1425,41 +1527,24 @@ const RoomInterface = ({
     const isLive = Boolean(seatedUser && ((isMine && !isMuted && !isMutedInRoom) || (!isMine && !isMutedInRoom)));
     return <MicSeat key={index} seatIndex={index} label={label} seatedUser={seatedUser} isMine={isMine} isOwnerSeat={isOwnerSeat} isLive={isLive} isMutedInRoom={isMutedInRoom} onTake={() => handleSeatClick(index, seatedUser)} onLongPressStart={() => seatedUser && handlePressStart(seatedUser.name)} onLongPressEnd={handlePressEnd} />;
   };
-  const joinFirstEmptySeat = () => {
-    const emptyIdx = seatedUsers.findIndex((s) => s === null);
-    if (emptyIdx === -1) { notify('All mic seats are occupied.'); return; }
-    handleSeatClick(emptyIdx, null);
-  };
-  const visibleMessages = messages.filter(msg => {
-    if (demoMode) return true;
-    if (!msg.createdAt) return true;
-    const ms = toTimestampMillis(msg.createdAt);
-    return ms !== null && ms >= joinedAt;
-  });
+  const joinFirstEmptySeat = () => { const emptyIdx = seatedUsers.findIndex((s) => s === null); if (emptyIdx === -1) { notify('All mic seats occupied.'); return; } handleSeatClick(emptyIdx, null); };
+  const visibleMessages = messages.filter((msg) => { if (demoMode) return true; if (!msg.createdAt) return true; const ms = toTimestampMillis(msg.createdAt); return ms !== null && ms >= joinedAt; });
 
   return (
     <main className="room" data-testid="voice-room">
       <header className="topbar">
-        <Btn className="icon-btn" aria-label="Minimize room" onClick={() => onMinimize({ title: roomData.title })}><ChevronIcon /></Btn>
+        <Btn className="icon-btn" onClick={() => onMinimize({ title: roomData.title })}><ChevronIcon /></Btn>
         <div className="brand"><p className="room-title">{roomData.title}</p><span className="text-[11px] font-bold text-[#f5c542] whitespace-nowrap shrink-0">ID {roomData.roomCode}</span></div>
-        <div className="tools">
-          <Btn className="count-pill" aria-label={`Room members (${roomData.activeMembers?.length || 1})`} onClick={() => setSheet(sheet === 'members' ? null : 'members')}><span aria-hidden="true">👤</span><span>{roomData.activeMembers?.length || 1}</span></Btn>
-        </div>
+        <div className="tools"><Btn className="count-pill" onClick={() => setSheet(sheet === 'members' ? null : 'members')}><span>👤</span><span>{roomData.activeMembers?.length || 1}</span></Btn></div>
       </header>
-      {toast && <div role="status" className="mx-3 mb-1 px-3 py-2 rounded-xl bg-[#2a2a32] border border-white/15 text-xs font-bold text-white text-center z-40">{toast}</div>}
+      {toast && <div className="mx-3 mb-1 px-3 py-2 rounded-xl bg-[#2a2a32] border border-white/15 text-xs font-bold text-white text-center z-40">{toast}</div>}
       <div className="stage">
         <div className="board">
           <div className="seat-row">{renderSeat(0, 'Host Seat')}<PulseWave />{renderSeat(1, 'Co-Host Seat')}</div>
-          <div className="seat-row">
-            <div className="seat-pair">{renderSeat(2, 'Seat 3')}<PulseWave />{renderSeat(3, 'Seat 4')}</div>
-            <div className="seat-pair">{renderSeat(4, 'Seat 5')}<PulseWave />{renderSeat(5, 'Seat 6')}</div>
-          </div>
-          <div className="seat-row">
-            <div className="seat-pair">{renderSeat(6, 'Seat 7')}<PulseWave />{renderSeat(7, 'Seat 8')}</div>
-            <div className="seat-pair">{renderSeat(8, 'Seat 9')}<PulseWave />{renderSeat(9, 'Seat 10')}</div>
-          </div>
+          <div className="seat-row"><div className="seat-pair">{renderSeat(2, 'Seat 3')}<PulseWave />{renderSeat(3, 'Seat 4')}</div><div className="seat-pair">{renderSeat(4, 'Seat 5')}<PulseWave />{renderSeat(5, 'Seat 6')}</div></div>
+          <div className="seat-row"><div className="seat-pair">{renderSeat(6, 'Seat 7')}<PulseWave />{renderSeat(7, 'Seat 8')}</div><div className="seat-pair">{renderSeat(8, 'Seat 9')}<PulseWave />{renderSeat(9, 'Seat 10')}</div></div>
         </div>
-        <div className="chat no-scrollbar" data-testid="room-chat">
+        <div className="chat no-scrollbar">
           <div className="mt-auto" />
           <p className="line-system"><span>📢 <span className="font-extrabold text-[#f5c542]">Announcement: </span>{announcementText}</span></p>
           {roomData.currentSong && <p className="line-system"><span>🎵 <span className="font-extrabold text-[#7ee7ff]">Now Playing: </span>{roomData.currentSong}</span></p>}
@@ -1473,13 +1558,13 @@ const RoomInterface = ({
         {sheet && (
           <div className="sheet-backdrop" onClick={() => setSheet(null)}>
             {sheet === 'gift' && (
-              <section className="sheet" aria-label="Gifts sheet" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" />
                 <div className="flex justify-between items-center mb-2.5">
                   <h2 className="sheet-title m-0">Gifts</h2>
                   <div className="flex items-center gap-3">
                     <span className="text-[#f5c542] font-extrabold text-sm flex items-center gap-1 tabular-nums"><CoinIcon />{isAdmin ? '∞' : liveCoins}</span>
-                    <CloseX label="Close gifts" onClick={() => setSheet(null)} />
+                    <CloseX onClick={() => setSheet(null)} />
                   </div>
                 </div>
                 <div className="flex overflow-x-auto gap-3 mb-3 no-scrollbar p-2 bg-white/5 rounded-xl">
@@ -1499,18 +1584,15 @@ const RoomInterface = ({
                     </Btn>
                   ))}
                 </div>
-                <Btn disabled={!selectedGift} onClick={() => selectedGift && sendGift(selectedGift)} className="w-full mt-3 bg-[#ff4d9a] disabled:bg-[#2a2a32] disabled:text-slate-400 text-white py-3 rounded-xl font-extrabold text-sm min-h-[44px] transition-colors">
+                <Btn disabled={!selectedGift} onClick={() => selectedGift && sendGift(selectedGift)} className="w-full mt-3 bg-[#ff4d9a] disabled:bg-[#2a2a32] disabled:text-slate-400 text-white py-3 rounded-xl font-extrabold text-sm min-h-[44px]">
                   {selectedGift ? `Send Gift · ${selectedGift.n} to ${giftTargetUser?.uid === user.uid ? 'Yourself' : giftTargetUser?.name || 'Member'}` : 'Select a Gift'}
                 </Btn>
               </section>
             )}
             {sheet === 'profile' && selectedUser && (
-              <section className="sheet" aria-label="User profile popup" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" />
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="sheet-title m-0">{selectedUser.uid === user.uid ? 'Your Seat' : `${selectedUser.name}'s Profile`}</h2>
-                  <CloseX label="Close profile popup" onClick={() => setSheet(null)} />
-                </div>
+                <div className="flex justify-between items-center mb-2"><h2 className="sheet-title m-0">{selectedUser.uid === user.uid ? 'Your Seat' : `${selectedUser.name}'s Profile`}</h2><CloseX onClick={() => setSheet(null)} /></div>
                 <div className="flex flex-col items-center gap-2 pb-2">
                   <UserAvatar src={selectedUser.img} name={selectedUser.name} className="w-[70px] h-[70px] rounded-full border-2 border-[#7ee7ff]" />
                   <p className="font-extrabold text-base text-[#f7f8ff]">{selectedUser.name}{selectedUser.uid === roomData.ownerId && <span className="ml-1.5 text-xs text-[#f5c542]">👑 Host</span>}</p>
@@ -1545,11 +1627,11 @@ const RoomInterface = ({
               </section>
             )}
             {sheet === 'more' && (
-              <section className="sheet" aria-label="More options" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" /><h2 className="sheet-title">More</h2>
                 <div className="flex flex-col">
                   <Btn className="py-3.5 border-b border-[#2a2a32] text-left text-white font-bold text-sm" onClick={() => { if (isSeated) liftUpSeat(user.uid); else { setSheet(null); joinFirstEmptySeat(); } }}>{isSeated ? 'Leave mic' : 'Join mic'}</Btn>
-                  <Btn className="py-3.5 border-b border-[#2a2a32] text-left text-white font-bold text-sm" onClick={() => { setSheet(null); setShowDailyTask(true); }}>Daily Task (Treasure Box)</Btn>
+                  <Btn className="py-3.5 border-b border-[#2a2a32] text-left text-white font-bold text-sm" onClick={() => { setSheet(null); setShowDailyTask(true); }}>Daily Task</Btn>
                   <Btn className="py-3.5 border-b border-[#2a2a32] text-left text-white font-bold text-sm" onClick={() => { setAnnouncementDraft(announcementText); setSheet('announcement'); }}>Room Announcement</Btn>
                   <Btn className="py-3.5 border-b border-[#2a2a32] text-left text-white font-bold text-sm" onClick={() => setSheet('song')}>Play Music</Btn>
                   <Btn className="py-3.5 border-b border-[#2a2a32] text-left text-white font-bold text-sm" onClick={() => { pushSystemLocal('Report sent.'); setSheet(null); }}>Report</Btn>
@@ -1558,9 +1640,9 @@ const RoomInterface = ({
               </section>
             )}
             {sheet === 'members' && (
-              <section className="sheet" aria-label="Room members list" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" />
-                <div className="flex justify-between items-center mb-3"><h2 className="sheet-title m-0">Members ({roomData.activeMembers?.length || 0})</h2><CloseX label="Close members list" onClick={() => setSheet(null)} /></div>
+                <div className="flex justify-between items-center mb-3"><h2 className="sheet-title m-0">Members ({roomData.activeMembers?.length || 0})</h2><CloseX onClick={() => setSheet(null)} /></div>
                 <div className="flex flex-col gap-3 max-h-[45vh] overflow-y-auto no-scrollbar">
                   {roomData.activeMembers?.map((m) => (
                     <div key={m.uid} className="flex items-center justify-between py-1">
@@ -1581,56 +1663,47 @@ const RoomInterface = ({
               </section>
             )}
             {sheet === 'emoji' && (
-              <section className="sheet" aria-label="Quick reactions" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" /><h2 className="sheet-title">Quick Reactions</h2>
-                <div className="grid grid-cols-3 gap-2">
-                  {QUICK_REACTIONS.map((reaction) => (
-                    <Btn key={reaction} onClick={() => { sendMsg(reaction); setSheet(null); }} className="py-2.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white">{reaction}</Btn>
-                  ))}
-                </div>
+                <div className="grid grid-cols-3 gap-2">{QUICK_REACTIONS.map((reaction) => (<Btn key={reaction} onClick={() => { sendMsg(reaction); setSheet(null); }} className="py-2.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white">{reaction}</Btn>))}</div>
               </section>
             )}
             {sheet === 'announcement' && (
-              <section className="sheet" aria-label="Edit room announcement" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" /><h2 className="sheet-title">Edit Announcement</h2>
                 <textarea className={C_SH_BLK} rows={3} maxLength={300} value={announcementDraft} onChange={(e) => setAnnouncementDraft(e.target.value)} />
-                <div className="flex gap-2">
-                  <Btn onClick={() => setSheet(null)} className={C_BTN_D}>Cancel</Btn>
-                  <Btn onClick={async () => { const next = announcementDraft.trim() || 'Welcome to the voice room.'; setAnnouncementText(next); setSheet(null); if (!demoMode) await rDoc(roomId).update({ announcement: next }); notify('Announcement updated!'); }} className={C_BTN_P}>Save</Btn>
-                </div>
+                <div className="flex gap-2"><Btn onClick={() => setSheet(null)} className={C_BTN_D}>Cancel</Btn><Btn onClick={async () => { const next = announcementDraft.trim() || 'Welcome to the voice room.'; setAnnouncementText(next); setSheet(null); if (!demoMode) await rDoc(roomId).update({ announcement: next }); notify('Announcement updated!'); }} className={C_BTN_P}>Save</Btn></div>
               </section>
             )}
             {sheet === 'song' && (
-              <section className="sheet" aria-label="Play music" onClick={(e) => e.stopPropagation()}>
+              <section className="sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="grabber" /><h2 className="sheet-title">Play Song</h2>
                 <input type="text" placeholder="Enter song name..." className={C_SH_BLK} value={newSongTitle} onChange={(e) => setNewSongTitle(e.target.value)} />
-                <div className="flex gap-2">
-                  <Btn onClick={() => setSheet(null)} className={C_BTN_D}>Cancel</Btn>
-                  <Btn onClick={async () => { if (!newSongTitle.trim()) return; const song = newSongTitle.trim(); setNewSongTitle(''); setSheet(null); if (demoMode) { setRoomData({ ...roomData, currentSong: song }); return; } await rDoc(roomId).update({ currentSong: song }); }} className={C_BTN_P}>Play</Btn>
-                </div>
+                <div className="flex gap-2"><Btn onClick={() => setSheet(null)} className={C_BTN_D}>Cancel</Btn><Btn onClick={async () => { if (!newSongTitle.trim()) return; const song = newSongTitle.trim(); setNewSongTitle(''); setSheet(null); if (demoMode) { setRoomData({ ...roomData, currentSong: song }); return; } await rDoc(roomId).update({ currentSong: song }); }} className={C_BTN_P}>Play</Btn></div>
               </section>
             )}
           </div>
         )}
       </div>
       <form className="dock" onSubmit={(e) => { e.preventDefault(); sendMsg(); }}>
-        <Btn className="dock-btn" aria-label={isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker'} onClick={() => { setIsSpeakerMuted((prev) => !prev); notify(isSpeakerMuted ? 'Speaker enabled' : 'Speaker muted'); }}><SpeakerIcon muted={isSpeakerMuted} /></Btn>
-        <Btn className="dock-btn" aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'} onClick={handleMicClick}><MicIcon muted={isMuted || !isSeated} /></Btn>
-        <input className="dock-input" aria-label="Room chat message" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputText.startsWith('@') ? 'Mentioning...' : 'Type...'} />
-        <Btn className="dock-btn" aria-label="Quick reactions" onClick={() => setSheet(sheet === 'emoji' ? null : 'emoji')}><SmileIcon /></Btn>
-        <Btn className="dock-btn" aria-label="Open gifts" onClick={() => (sheet === 'gift' ? setSheet(null) : openGiftSheet())}><GiftIcon /></Btn>
-        <Btn className="dock-btn" aria-label="More room options" onClick={() => setSheet(sheet === 'more' ? null : 'more')}><MoreIcon /></Btn>
+        <Btn className="dock-btn" onClick={() => { setIsSpeakerMuted((prev) => !prev); notify(isSpeakerMuted ? 'Speaker enabled' : 'Speaker muted'); }}><SpeakerIcon muted={isSpeakerMuted} /></Btn>
+        <Btn className="dock-btn" onClick={handleMicClick}><MicIcon muted={isMuted || !isSeated} /></Btn>
+        <input className="dock-input" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputText.startsWith('@') ? 'Mentioning...' : 'Type...'} />
+        <Btn className="dock-btn" onClick={() => setSheet(sheet === 'emoji' ? null : 'emoji')}><SmileIcon /></Btn>
+        <Btn className="dock-btn" onClick={() => (sheet === 'gift' ? setSheet(null) : openGiftSheet())}><GiftIcon /></Btn>
+        <Btn className="dock-btn" onClick={() => setSheet(sheet === 'more' ? null : 'more')}><MoreIcon /></Btn>
       </form>
-      {showDailyTask && (
-        <DailyTaskModal onClose={() => setShowDailyTask(false)} onClaimCoins={async (amount) => {
-          if (demoMode) { const next = liveCoins + amount; setLiveCoins(next); onUpdateLocalCoins?.(next); return; }
-          await uDoc(user.uid).update({ coins: FV.increment(amount) });
-        }} />
-      )}
+      {showDailyTask && (<DailyTaskModal onClose={() => setShowDailyTask(false)} onClaimCoins={async (amount) => { if (demoMode) { const next = liveCoins + amount; setLiveCoins(next); onUpdateLocalCoins?.(next); return; } await uDoc(user.uid).update({ coins: FV.increment(amount) }); }} />)}
       {giftAnim && (
         <div className="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-center">
-          <div className={`gift-anim-${giftAnim.anim || 'float'} flex items-center justify-center gift-anim-media`}>
-            {giftAnim.type === 'image' ? <img src={giftAnim.i} alt={giftAnim.n} /> : giftAnim.type === 'video' ? <video src={giftAnim.i} autoPlay loop muted playsInline /> : giftAnim.i}
+          <div className={`gift-anim-${giftAnim.anim || 'float'} flex items-center justify-center gift-anim-media`} style={{ fontSize: '80px' }}>
+            {(() => {
+              const type = giftAnim.type || giftAnim.giftType || 'emoji';
+              const src = giftAnim.i || giftAnim.giftIcon;
+              if (type === 'image') return <img src={src} alt="" className="w-32 h-32 object-contain" />;
+              if (type === 'video') return <video src={src} autoPlay loop muted playsInline className="w-32 h-32 object-contain" />;
+              return src;
+            })()}
           </div>
         </div>
       )}
@@ -1639,19 +1712,18 @@ const RoomInterface = ({
 };
 
 const Row = ({ icon, label, value, onClick }) => (
-  <Btn onClick={onClick} className="w-full flex items-center justify-between p-4 border-b border-gray-800/50 last:border-none cursor-pointer hover:bg-white/5 transition-colors text-left min-h-[56px]">
+  <Btn onClick={onClick} className="w-full flex items-center justify-between p-4 border-b border-gray-800/50 last:border-none hover:bg-white/5 text-left min-h-[56px]">
     <div className="flex items-center gap-3 min-w-0"><span className="text-lg text-gray-400 w-6 text-center shrink-0">{icon}</span><span className="text-[15px] text-gray-200 whitespace-nowrap">{label}</span></div>
     <div className="flex items-center gap-2 min-w-0 ml-2">{typeof value === 'string' ? <span className="text-sm text-gray-400 truncate max-w-[170px]">{value}</span> : value}<span className="text-gray-600 text-lg shrink-0">›</span></div>
   </Btn>
 );
 const MenuItem = ({ icon, title, onClick }) => (
-  <Btn onClick={onClick} className="w-full flex items-center justify-between p-4 border-b border-gray-800 last:border-none cursor-pointer hover:bg-white/5 transition-colors text-left min-h-[54px]">
-    <div className="flex items-center gap-4"><span className="text-xl text-gray-400">{icon}</span><span className="text-[15px] text-gray-200">{title}</span></div>
-    <span className="text-gray-600 text-lg">›</span>
+  <Btn onClick={onClick} className="w-full flex items-center justify-between p-4 border-b border-gray-800 last:border-none hover:bg-white/5 text-left min-h-[54px]">
+    <div className="flex items-center gap-4"><span className="text-xl text-gray-400">{icon}</span><span className="text-[15px] text-gray-200">{title}</span></div><span className="text-gray-600 text-lg">›</span>
   </Btn>
 );
 const QuickIcon = ({ icon, label, onClick }) => (
-  <Btn onClick={onClick} className="flex flex-col items-center gap-1 cursor-pointer min-w-[64px] min-h-[52px] justify-center active:scale-95 transition-transform">
+  <Btn onClick={onClick} className="flex flex-col items-center gap-1 min-w-[64px] min-h-[52px] justify-center active:scale-95">
     <div className="text-3xl drop-shadow-md">{icon}</div><span className="text-[11px] font-semibold text-gray-300 whitespace-nowrap">{label}</span>
   </Btn>
 );
@@ -1670,36 +1742,35 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
   const [visitors, setVisitors] = useState([]);
   const dpInputRef = useRef(null);
   const bannerInputRef = useRef(null);
-  const isSuperAdmin = userProfile?.displayId === ADMIN_DISPLAY_ID;
+  const isSuperAdmin = isOfficialDisplayId(userProfile?.displayId);
   const gender = userProfile?.gender || 'Male';
   const country = userProfile?.country || COUNTRIES[0];
   const priceTag = userProfile?.priceTag || PRICE_TAGS[0];
-  const titleBadge = userProfile?.title || TITLES[0];
   const isVisitorUnlocked = isVisitorPassActive(userProfile?.visitorExpiry);
+  const activeTitles = getActiveTitles(userProfile?.titles);
   const showComingSoon = (label) => onNotice(`🚧 ${label} Coming Soon!`);
 
+  // ============ VISITOR FIX: remove orderBy (composite index issue) + dedupe by visitor ============
   useEffect(() => {
     if (!user || demoMode) return;
-    const unsub = db.collection('profileViews').where('visitedUid', '==', user.uid).orderBy('timestamp', 'desc').limit(20).onSnapshot(snap => {
-      setVisitors(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = db.collection('profileViews').where('visitedUid', '==', user.uid).limit(100).onSnapshot((snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (toTimestampMillis(b.timestamp) || 0) - (toTimestampMillis(a.timestamp) || 0));
+      const seen = new Set();
+      const unique = list.filter((v) => { if (!v.visitorUid || seen.has(v.visitorUid)) return false; seen.add(v.visitorUid); return true; });
+      setVisitors(unique.slice(0, 20));
+    }, (err) => { console.warn('profileViews query:', err); });
     return () => unsub();
   }, [user, demoMode]);
 
   const persistProfilePatch = async (patch, successNotice) => {
     setSaving(true);
-    try {
-      if (!demoMode) await uDoc(user.uid).update(patch);
-      setUserProfile({ ...userProfile, ...patch });
-      if (successNotice) onNotice(successNotice);
-    } catch (err) { onNotice(`Save failed: ${errMsg(err, 'Update failed')}`); }
+    try { if (!demoMode) await uDoc(user.uid).update(patch); setUserProfile({ ...userProfile, ...patch }); if (successNotice) onNotice(successNotice); }
+    catch (err) { onNotice(`Save failed: ${errMsg(err)}`); }
     finally { setSaving(false); }
   };
   const handleLogout = async () => {
-    if (!demoMode) {
-      await uDoc(user.uid).update({ isOnline: false, lastSeen: Date.now() }).catch(() => {});
-      await auth.signOut();
-    }
+    if (!demoMode) { await uDoc(user.uid).update({ isOnline: false, lastSeen: Date.now() }).catch(() => {}); await auth.signOut(); }
     setShowSettingsModal(false); setView('login');
   };
   const handleDpPick = (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setCropTarget({ file: f, type: 'dp' }); };
@@ -1708,14 +1779,9 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
     const type = cropTarget?.type; setCropTarget(null);
     if (!type) return;
     try {
-      if (type === 'dp') {
-        setUploading(true); if (!demoMode) await uDoc(user.uid).update({ photoURL: base64 });
-        setUserProfile({ ...userProfile, photoURL: base64 }); setUploading(false); onNotice('Avatar updated!');
-      } else {
-        setBannerUploading(true); if (!demoMode) await uDoc(user.uid).update({ bannerURL: base64 });
-        setUserProfile({ ...userProfile, bannerURL: base64 }); setBannerUploading(false); onNotice('Banner updated!');
-      }
-    } catch (err) { onNotice(`Save failed: ${errMsg(err, 'Upload failed')}`); setUploading(false); setBannerUploading(false); }
+      if (type === 'dp') { setUploading(true); if (!demoMode) await uDoc(user.uid).update({ photoURL: base64 }); setUserProfile({ ...userProfile, photoURL: base64 }); setUploading(false); onNotice('Avatar updated!'); }
+      else { setBannerUploading(true); if (!demoMode) await uDoc(user.uid).update({ bannerURL: base64 }); setUserProfile({ ...userProfile, bannerURL: base64 }); setBannerUploading(false); onNotice('Banner updated!'); }
+    } catch (err) { onNotice(`Save failed: ${errMsg(err)}`); setUploading(false); setBannerUploading(false); }
   };
   const handleVisitorClick = () => { if (isVisitorUnlocked) setShowVisitorModal(true); else setShowPlansModal(true); };
   const buyVisitorPass = async (days, price) => {
@@ -1733,7 +1799,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
   };
   const handleBirthday = () => {
     if (!userProfile?.birthday) { setTempInput(''); setActiveSheet('birthday'); }
-    else onNotice('🚧 Document Upload Coming Soon! Birthday cannot be changed once set.');
+    else onNotice('Birthday cannot be changed once set.');
   };
   const saveSheetValue = async (field) => {
     const cleaned = tempInput.trim();
@@ -1742,8 +1808,11 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
     else await persistProfilePatch({ bio: cleaned }, 'Signature updated!');
     setActiveSheet(null); setTempInput('');
   };
-
-  const recentCount = visitors.filter(v => Date.now() - (v.timestamp?.toMillis() || 0) < 86400000).length;
+  const toggleTitleActive = async (titleId) => {
+    const newTitles = (userProfile.titles || []).map((t) => (t.id === titleId ? { ...t, active: !t.active } : t));
+    await persistProfilePatch({ titles: newTitles }, 'Title visibility updated');
+  };
+  const recentCount = visitors.filter((v) => Date.now() - (toTimestampMillis(v.timestamp) || 0) < 86400000).length;
   const totalCount = visitors.length;
 
   return (
@@ -1755,13 +1824,13 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
           <div className="relative h-64 shrink-0">
             <div className="absolute inset-0 opacity-35 blur-sm overflow-hidden"><BannerCover src={userProfile.bannerURL} /></div>
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-[#0b1120]/50 to-[#0b1120]" />
-            <Btn onClick={handleLogout} className="absolute top-3 right-3 z-20 bg-black/50 hover:bg-red-600/80 text-white text-xs font-bold px-3.5 py-2 rounded-full border border-white/15 backdrop-blur-sm min-h-[36px] transition-colors">Logout</Btn>
-            <Btn onClick={() => setSubView('edit')} className="absolute top-11 left-5 right-4 flex items-center gap-4 text-left cursor-pointer z-10">
+            <Btn onClick={handleLogout} className="absolute top-3 right-3 z-20 bg-black/50 hover:bg-red-600/80 text-white text-xs font-bold px-3.5 py-2 rounded-full border border-white/15 min-h-[36px]">Logout</Btn>
+            <Btn onClick={() => setSubView('edit')} className="absolute top-11 left-5 right-4 flex items-center gap-4 text-left z-10">
               <div className="w-20 h-20 rounded-2xl border-2 border-gray-600 shadow-lg overflow-hidden bg-gray-800 card-shadow shrink-0"><UserAvatar src={userProfile.photoURL} name={userProfile.displayName} className="w-full h-full object-cover" /></div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-2xl font-extrabold text-white flex items-center gap-1.5 flex-wrap leading-tight">
                   <span className="truncate max-w-[165px]">{userProfile.displayName}</span>
-                  <span className="text-xl" aria-label={`Gender: ${gender}`}>{getGenderEmoji(gender)}</span>
+                  <span className="text-xl">{getGenderEmoji(gender)}</span>
                   {isSuperAdmin && <span className="star-official-badge text-[10px] px-2 py-0.5 rounded">⭐ Official</span>}
                 </h1>
                 <div className="flex items-center gap-2 mt-1.5">
@@ -1773,6 +1842,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
                   <span>{country.flag} {country.name}</span>
                   {!isSuperAdmin && <span className="text-amber-300 flex items-center gap-1 tabular-nums">· <CharmIcon charms={userProfile.charms} size="text-xs" /> {userProfile.charms || 0}</span>}
                 </div>
+                {activeTitles.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{activeTitles.map((t) => <TitleBadge key={t.id} title={t} />)}</div>}
               </div>
               <span className="text-gray-400 text-2xl font-bold pr-1 shrink-0">›</span>
             </Btn>
@@ -1789,11 +1859,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             <Btn onClick={handleVisitorClick} className={C_ROW_B}>
               <div className="flex items-center gap-4"><span className="text-xl text-gray-400">👁️</span><span className="text-[15px] text-gray-200">Visitors</span></div>
               <div className="flex items-center gap-2">
-                {isVisitorUnlocked ? (
-                  <span className="text-sm text-green-400 font-semibold">Recent ({recentCount})</span>
-                ) : (
-                  <span className="text-sm text-orange-400 font-semibold animate-pulse">Total ({totalCount})</span>
-                )}
+                {isVisitorUnlocked ? <span className="text-sm text-green-400 font-semibold">Recent ({recentCount})</span> : <span className="text-sm text-orange-400 font-semibold animate-pulse">Total ({totalCount})</span>}
                 <span className="text-gray-600 text-lg">›</span>
               </div>
             </Btn>
@@ -1802,10 +1868,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             <MenuItem icon="📝" title="Contributions" onClick={() => showComingSoon('Contributions')} />
           </div>
           <div className={`mx-3 mt-3 ${C_CARD_ME}`}>
-            <Btn onClick={() => showComingSoon('Language Settings')} className={C_ROW_B}>
-              <div className="flex items-center gap-4"><span className="text-xl text-gray-400">🌐</span><span className="text-[15px] text-gray-200">Language</span></div>
-              <div className="flex items-center gap-2"><span className="text-sm text-gray-400">English</span><span className="text-gray-600 text-lg">›</span></div>
-            </Btn>
+            <Btn onClick={() => showComingSoon('Language')} className={C_ROW_B}><div className="flex items-center gap-4"><span className="text-xl text-gray-400">🌐</span><span className="text-[15px] text-gray-200">Language</span></div><div className="flex items-center gap-2"><span className="text-sm text-gray-400">English</span><span className="text-gray-600 text-lg">›</span></div></Btn>
             <MenuItem icon="🛡️" title="Parental control mode" onClick={() => showComingSoon('Parental Control')} />
             <MenuItem icon="❓" title="Help Center" onClick={() => showComingSoon('Help Center')} />
             <MenuItem icon="🔒" title="Security Center" onClick={() => showComingSoon('Security Center')} />
@@ -1814,17 +1877,15 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
         </div>
       )}
       {subView === 'edit' && (
-        <div className="fixed inset-0 max-w-[430px] mx-auto bg-[#0b1120] z-[200] flex flex-col slide-in-right">
-          <div className="flex items-center p-3 border-b border-gray-800 bg-[#0b1120]/90 backdrop-blur-md z-10 shrink-0 sticky top-0">
-            <Btn aria-label="Back to Me tab" onClick={() => setSubView('me')} className="text-3xl font-light text-gray-400 px-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-white transition-colors">‹</Btn>
+        <div className="fixed inset-0 max-w-[430px] mx-auto bg-[#0b1120] z-[200] flex flex-col">
+          <div className="flex items-center p-3 border-b border-gray-800 bg-[#0b1120]/90 z-10 shrink-0 sticky top-0">
+            <Btn onClick={() => setSubView('me')} className="text-3xl font-light text-gray-400 px-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-white">‹</Btn>
             <h1 className="text-xl font-bold ml-1 text-white">Edit Profile</h1>
           </div>
           <div className="flex-1 overflow-y-auto no-scrollbar pb-10 pt-4 px-3 space-y-4">
-            <div role="button" tabIndex={0} onClick={() => bannerInputRef.current?.click()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') bannerInputRef.current?.click(); }} className="relative w-full h-32 rounded-2xl overflow-hidden border border-gray-800 card-shadow cursor-pointer group">
+            <div onClick={() => bannerInputRef.current?.click()} className="relative w-full h-32 rounded-2xl overflow-hidden border border-gray-800 card-shadow cursor-pointer group">
               <BannerCover src={userProfile.bannerURL} />
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                <span className="text-white text-xs font-bold bg-black/60 px-4 py-2 rounded-full border border-white/20">{bannerUploading ? 'Uploading Banner...' : 'Change Banner'}</span>
-              </div>
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-white text-xs font-bold bg-black/60 px-4 py-2 rounded-full border border-white/20">{bannerUploading ? 'Uploading...' : 'Change Banner'}</span></div>
             </div>
             <div className={C_CARD_ME}>
               <Row icon="🖼️" label="Avatar" value={<div className="flex items-center gap-2">{uploading && <span className="text-xs text-pink-400 animate-pulse">Uploading...</span>}<UserAvatar src={userProfile.photoURL} name={userProfile.displayName} className="w-10 h-10 rounded-full border border-gray-600 object-cover" /></div>} onClick={() => dpInputRef.current?.click()} />
@@ -1840,26 +1901,44 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             </div>
             <div className={C_CARD_ME}>
               <Row icon="🏷️" label="Price Tag" value={priceTag.id === 'none' ? 'None' : `${priceTag.icon} ${priceTag.name} (${priceTag.price} Coins)`} onClick={() => setActiveSheet('price')} />
-              <Row icon="👑" label="Title" value={titleBadge.name} onClick={() => setActiveSheet('title')} />
               <Row icon="🎖️" label="Badge" value="Coming Soon" onClick={() => showComingSoon('Badges')} />
-              <Row icon="⭐" label="Level" value={`Lv.${userProfile.level || 1}`} onClick={() => onNotice('Level is based on activity.')} />
+              <Row icon="⭐" label="Level" value={`Lv.${userProfile.level || 1}`} onClick={() => onNotice('Level based on activity.')} />
+            </div>
+            <div className={C_CARD_ME}>
+              <div className="p-4">
+                <h3 className="text-sm font-bold text-white mb-1">👑 My Titles</h3>
+                <p className="text-[11px] text-gray-500 mb-3">Titles are given by Official accounts only.</p>
+                {(() => {
+                  const myTitles = (userProfile.titles || []).filter((t) => !isTitleExpired(t));
+                  if (myTitles.length === 0) return <p className="text-xs text-gray-500 py-2">No titles yet.</p>;
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {myTitles.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between gap-2 bg-black/30 p-2 rounded-lg">
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0"><TitleBadge title={t} size="md" />{t.expiresAt && <span className="text-[10px] text-gray-500">{new Date(t.expiresAt).toLocaleDateString()}</span>}</div>
+                          <Btn onClick={() => toggleTitleActive(t.id)} className={`px-2.5 py-1 rounded text-xs font-bold shrink-0 ${t.active !== false ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'}`}>{t.active !== false ? 'ON' : 'OFF'}</Btn>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         </div>
       )}
       {showPlansModal && (
         <SheetModal onClose={() => setShowPlansModal(false)} extraCls="p-6 pb-10 border-pink-500/30">
-          <Grabber cls="mb-6" />
-          <h2 className="text-2xl font-extrabold text-center text-white mb-1">Visitor Book</h2>
+          <Grabber cls="mb-6" /><h2 className="text-2xl font-extrabold text-center text-white mb-1">Visitor Book</h2>
           <p className="text-center text-gray-400 text-sm mb-6">Unlock to see who viewed your profile</p>
           <div className="flex flex-col gap-4">
             {VISITOR_PLANS.map((plan) => {
               const isPopular = plan.badge === 'POPULAR', isBest = plan.badge?.includes('BEST VALUE');
               return (
-                <div key={plan.days} className={`flex justify-between items-center p-4 rounded-xl border relative ${isPopular ? 'bg-gradient-to-r from-pink-900/40 to-[#0b1120] border-pink-500/50 glow-box' : isBest ? 'bg-gradient-to-r from-yellow-900/30 to-[#0b1120] border-yellow-500/50' : 'bg-[#0b1120] border-gray-700'}`}>
+                <div key={plan.days} className={`flex justify-between items-center p-4 rounded-xl border relative ${isPopular ? 'bg-gradient-to-r from-pink-900/40 to-[#0b1120] border-pink-500/50' : isBest ? 'bg-gradient-to-r from-yellow-900/30 to-[#0b1120] border-yellow-500/50' : 'bg-[#0b1120] border-gray-700'}`}>
                   {plan.badge && <span className={`absolute -top-3 left-4 text-[10px] font-bold px-2 py-0.5 rounded-full ${isBest ? 'bg-yellow-500 text-black' : 'bg-pink-500 text-white'}`}>{plan.badge}</span>}
-                  <div><h3 className="text-lg font-bold text-white">{plan.label}</h3><p className={`text-xs ${isPopular || isBest ? 'text-gray-400 line-through' : 'text-gray-500'}`}>{plan.subtitle}</p></div>
-                  <Btn onClick={() => buyVisitorPass(plan.days, plan.price)} className={`px-5 py-2 rounded-lg font-bold text-sm tabular-nums min-h-[40px] ${isPopular ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/40' : isBest ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/40' : 'bg-gray-700 text-white'}`}>🪙 {plan.price.toLocaleString()}</Btn>
+                  <div><h3 className="text-lg font-bold text-white">{plan.label}</h3><p className="text-xs text-gray-500">{plan.subtitle}</p></div>
+                  <Btn onClick={() => buyVisitorPass(plan.days, plan.price)} className={`px-5 py-2 rounded-lg font-bold text-sm tabular-nums min-h-[40px] ${isPopular ? 'bg-pink-500 text-white' : isBest ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-white'}`}>🪙 {plan.price.toLocaleString()}</Btn>
                 </div>
               );
             })}
@@ -1878,10 +1957,10 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             {visitors.length === 0 ? <p className="text-center text-gray-400 py-4 text-sm">No visitors yet.</p> : visitors.map((v) => (
               <div key={v.id} className="flex items-center justify-between p-3 bg-[#0b1120] rounded-xl border border-gray-800">
                 <div className="flex items-center gap-3">
-                  <div className="relative"><UserAvatar src={v.visitorImg} name={v.visitorName} className="w-12 h-12 rounded-full border border-gray-700" /></div>
-                  <div><p className="font-bold text-[15px] text-white">{v.visitorName}</p><p className="text-xs text-gray-500">{v.timestamp ? new Date(v.timestamp.toMillis()).toLocaleString() : 'Just now'}</p></div>
+                  <UserAvatar src={v.visitorImg} name={v.visitorName} className="w-12 h-12 rounded-full border border-gray-700" />
+                  <div><p className="font-bold text-[15px] text-white">{v.visitorName}</p><p className="text-xs text-gray-500">{toTimestampMillis(v.timestamp) ? new Date(toTimestampMillis(v.timestamp)).toLocaleString() : 'Just now'}</p></div>
                 </div>
-                <Btn onClick={() => onNotice(`Viewing ${v.visitorName}'s profile coming soon!`)} className="bg-pink-500/10 text-pink-400 px-4 py-1.5 rounded-full font-bold text-xs border border-pink-500/20 hover:bg-pink-500/20 transition-colors min-h-[36px]">View</Btn>
+                <Btn onClick={() => onNotice(`Viewing ${v.visitorName}'s profile coming soon!`)} className="bg-pink-500/10 text-pink-400 px-4 py-1.5 rounded-full font-bold text-xs border border-pink-500/20 min-h-[36px]">View</Btn>
               </div>
             ))}
           </div>
@@ -1892,39 +1971,33 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
         <SheetModal onClose={() => setShowSettingsModal(false)} extraCls="pb-8">
           <Grabber /><h2 className="text-lg font-bold text-white mb-4">Settings</h2>
           <div className="bg-[#0b1120] rounded-2xl border border-gray-800 overflow-hidden mb-4">
-            <div className="p-4 border-b border-gray-800 flex justify-between items-center text-sm"><span className="text-gray-400">Account Email</span><span className="text-gray-200 font-semibold truncate max-w-[200px]">{user.email || userProfile.email || 'Guest'}</span></div>
-            <Btn onClick={() => showComingSoon('Notification Preferences')} className="w-full p-4 border-b border-gray-800 flex justify-between items-center text-sm text-left hover:bg-white/5"><span className="text-gray-200">Notifications</span><span className="text-gray-500">›</span></Btn>
-            <Btn onClick={() => showComingSoon('Privacy Settings')} className="w-full p-4 flex justify-between items-center text-sm text-left hover:bg-white/5"><span className="text-gray-200">Privacy &amp; Blocked List</span><span className="text-gray-500">›</span></Btn>
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center text-sm"><span className="text-gray-400">Email</span><span className="text-gray-200 font-semibold truncate max-w-[200px]">{user.email || userProfile.email || 'Guest'}</span></div>
+            <Btn onClick={() => showComingSoon('Notifications')} className="w-full p-4 border-b border-gray-800 flex justify-between items-center text-sm text-left hover:bg-white/5"><span className="text-gray-200">Notifications</span><span className="text-gray-500">›</span></Btn>
+            <Btn onClick={() => showComingSoon('Privacy')} className="w-full p-4 flex justify-between items-center text-sm text-left hover:bg-white/5"><span className="text-gray-200">Privacy &amp; Blocked List</span><span className="text-gray-500">›</span></Btn>
           </div>
-          <Btn onClick={handleLogout} className="w-full bg-red-600/90 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl min-h-[48px] transition-colors">Logout</Btn>
+          <Btn onClick={handleLogout} className="w-full bg-red-600/90 text-white font-bold py-3.5 rounded-xl min-h-[48px]">Logout</Btn>
           <Btn onClick={() => setShowSettingsModal(false)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-2 min-h-[44px]">Close</Btn>
         </SheetModal>
       )}
       {(activeSheet === 'nickname' || activeSheet === 'signature') && (
         <SheetModal zClass="z-[400]" onClose={() => { setActiveSheet(null); setTempInput(''); }}>
           <h2 className="text-lg font-bold mb-4 text-white">{activeSheet === 'nickname' ? 'Edit Nickname' : 'Edit Signature'}</h2>
-          <textarea value={tempInput} onChange={(e) => setTempInput(e.target.value)} className={`${C_BLK_INP} transition-colors`} rows={activeSheet === 'signature' ? 3 : 1} maxLength={activeSheet === 'nickname' ? 15 : 50} />
-          <Btn disabled={saving} onClick={() => saveSheetValue(activeSheet)} className="w-full bg-pink-500 text-white font-bold py-3 rounded-xl mt-4 btn-glow min-h-[44px] disabled:opacity-60">{saving ? 'Saving...' : 'Save'}</Btn>
+          <textarea value={tempInput} onChange={(e) => setTempInput(e.target.value)} className={C_BLK_INP} rows={activeSheet === 'signature' ? 3 : 1} maxLength={activeSheet === 'nickname' ? 15 : 50} />
+          <Btn disabled={saving} onClick={() => saveSheetValue(activeSheet)} className="w-full bg-pink-500 text-white font-bold py-3 rounded-xl mt-4 min-h-[44px] disabled:opacity-60">{saving ? 'Saving...' : 'Save'}</Btn>
           <Btn onClick={() => { setActiveSheet(null); setTempInput(''); }} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-2 min-h-[44px]">Cancel</Btn>
         </SheetModal>
       )}
       {activeSheet === 'gender' && (
         <SheetModal zClass="z-[400]" onClose={() => setActiveSheet(null)}>
           <h2 className="text-lg font-bold mb-4 text-white">Select Gender</h2>
-          {(['Male', 'Female', 'Other']).map((g) => (
-            <Btn key={g} onClick={() => { persistProfilePatch({ gender: g }, 'Gender updated!'); setActiveSheet(null); }} className="w-full flex items-center gap-3 p-4 border-b border-gray-800 text-white text-lg font-semibold hover:bg-white/5 min-h-[56px]"><span className="text-xl">{getGenderEmoji(g)}</span> {g}</Btn>
-          ))}
+          {['Male', 'Female', 'Other'].map((g) => (<Btn key={g} onClick={() => { persistProfilePatch({ gender: g }, 'Gender updated!'); setActiveSheet(null); }} className="w-full flex items-center gap-3 p-4 border-b border-gray-800 text-white text-lg font-semibold hover:bg-white/5 min-h-[56px]"><span className="text-xl">{getGenderEmoji(g)}</span> {g}</Btn>))}
           <Btn onClick={() => setActiveSheet(null)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-4 min-h-[44px]">Cancel</Btn>
         </SheetModal>
       )}
       {activeSheet === 'country' && (
         <SheetModal zClass="z-[400]" maxH="max-h-[75vh] overflow-y-auto no-scrollbar" onClose={() => setActiveSheet(null)}>
           <h2 className="text-lg font-bold mb-4 text-white sticky top-0 bg-[#151d2c] py-1">Select Region</h2>
-          {COUNTRIES.map((c) => (
-            <Btn key={c.code} onClick={() => { persistProfilePatch({ country: c }, `Region set to ${c.name}`); setActiveSheet(null); }} className="w-full text-left p-4 border-b border-gray-800 text-white text-base font-semibold hover:bg-white/5 flex items-center justify-between min-h-[52px]">
-              <span>{c.flag} {c.name}</span>{country.code === c.code && <span className="text-pink-400 text-sm font-bold">✓</span>}
-            </Btn>
-          ))}
+          {COUNTRIES.map((c) => (<Btn key={c.code} onClick={() => { persistProfilePatch({ country: c }, `Region set to ${c.name}`); setActiveSheet(null); }} className="w-full text-left p-4 border-b border-gray-800 text-white text-base font-semibold hover:bg-white/5 flex items-center justify-between min-h-[52px]"><span>{c.flag} {c.name}</span>{country.code === c.code && <span className="text-pink-400 text-sm font-bold">✓</span>}</Btn>))}
           <Btn onClick={() => setActiveSheet(null)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-4 min-h-[44px]">Cancel</Btn>
         </SheetModal>
       )}
@@ -1932,44 +2005,25 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
         <SheetModal zClass="z-[400]" onClose={() => setActiveSheet(null)}>
           <h2 className="text-lg font-bold mb-2 text-white">Set Price Tag</h2>
           <p className="text-sm text-gray-400 mb-4">People must send this gift to message you.</p>
-          {PRICE_TAGS.map((p) => (
-            <Btn key={p.id} onClick={() => { persistProfilePatch({ priceTag: p }, 'Price Tag updated!'); setActiveSheet(null); }} className="w-full flex justify-between items-center p-4 border-b border-gray-800 hover:bg-white/5 min-h-[56px]">
-              <span className="text-white text-lg font-semibold">{p.icon} {p.name}</span>{p.price && <span className="text-yellow-500 font-bold tabular-nums">🪙 {p.price}</span>}
-            </Btn>
-          ))}
-          <Btn onClick={() => setActiveSheet(null)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-4 min-h-[44px]">Cancel</Btn>
-        </SheetModal>
-      )}
-      {activeSheet === 'title' && (
-        <SheetModal zClass="z-[400]" onClose={() => setActiveSheet(null)}>
-          <h2 className="text-lg font-bold mb-4 text-white">Select Title</h2>
-          {TITLES.map((t) => (
-            <Btn key={t.id} onClick={() => { persistProfilePatch({ title: t }, 'Title updated!'); setActiveSheet(null); }} className="w-full text-left p-4 border-b border-gray-800 text-white text-lg font-semibold hover:bg-white/5 flex items-center justify-between min-h-[56px]">
-              <span>{t.name}</span>{titleBadge.id === t.id && <span className="text-pink-400 text-sm font-bold">✓</span>}
-            </Btn>
-          ))}
+          {PRICE_TAGS.map((p) => (<Btn key={p.id} onClick={() => { persistProfilePatch({ priceTag: p }, 'Price Tag updated!'); setActiveSheet(null); }} className="w-full flex justify-between items-center p-4 border-b border-gray-800 hover:bg-white/5 min-h-[56px]"><span className="text-white text-lg font-semibold">{p.icon} {p.name}</span>{p.price && <span className="text-yellow-500 font-bold tabular-nums">🪙 {p.price}</span>}</Btn>))}
           <Btn onClick={() => setActiveSheet(null)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-4 min-h-[44px]">Cancel</Btn>
         </SheetModal>
       )}
       {activeSheet === 'birthday' && (
         <SheetModal zClass="z-[400]" onClose={() => { setActiveSheet(null); setTempInput(''); }}>
           <h2 className="text-lg font-bold mb-2 text-white">Set Birthday</h2>
-          <p className="text-sm text-gray-400 mb-4">You can only set this once. Make sure it&apos;s correct.</p>
+          <p className="text-sm text-gray-400 mb-4">Once set, cannot be changed.</p>
           <input type="date" value={tempInput} className={C_BLK_INP} onChange={(e) => setTempInput(e.target.value)} />
-          <Btn onClick={() => { persistProfilePatch({ birthday: tempInput || '2008-01-01' }, 'Birthday saved!'); setActiveSheet(null); setTempInput(''); }} className="w-full bg-pink-500 text-white font-bold py-3 rounded-xl mt-4 btn-glow min-h-[44px]">Confirm Birthday</Btn>
+          <Btn onClick={() => { persistProfilePatch({ birthday: tempInput || '2008-01-01' }, 'Birthday saved!'); setActiveSheet(null); setTempInput(''); }} className="w-full bg-pink-500 text-white font-bold py-3 rounded-xl mt-4 min-h-[44px]">Confirm</Btn>
           <Btn onClick={() => { setActiveSheet(null); setTempInput(''); }} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-2 min-h-[44px]">Cancel</Btn>
         </SheetModal>
       )}
-      {cropTarget && (
-        <ImageCropModal file={cropTarget.file} aspectRatio={cropTarget.type === 'dp' ? 1 : 16 / 9} outputWidth={cropTarget.type === 'dp' ? 400 : 1000} title={cropTarget.type === 'dp' ? 'Crop Profile Picture' : 'Crop Banner'} onCrop={handleCropDone} onCancel={() => setCropTarget(null)} onError={onNotice} />
-      )}
+      {cropTarget && (<ImageCropModal file={cropTarget.file} aspectRatio={cropTarget.type === 'dp' ? 1 : 16 / 9} outputWidth={cropTarget.type === 'dp' ? 400 : 1000} title={cropTarget.type === 'dp' ? 'Crop Profile Picture' : 'Crop Banner'} onCrop={handleCropDone} onCancel={() => setCropTarget(null)} onError={onNotice} />)}
     </div>
   );
 };
 
-const UserProfileView = ({
-  targetUser, currentUser, currentProfile, onBack, setCurrentChat, onNotice, onSelectProfile, demoMode, demoReceivedGifts, demoUsersMap
-}) => {
+const UserProfileView = ({ targetUser, currentUser, currentProfile, onBack, setCurrentChat, onNotice, onSelectProfile, demoMode, demoReceivedGifts, demoUsersMap }) => {
   const buildInitialUser = () => {
     const res = demoMode && demoUsersMap?.[targetUser.uid] ? demoUsersMap[targetUser.uid] : null;
     return {
@@ -1983,6 +2037,8 @@ const UserProfileView = ({
       isAdmin: Boolean(res?.isAdmin ?? targetUser.isAdmin), adminPermissions: res?.adminPermissions || targetUser.adminPermissions || [],
       gender: res?.gender || targetUser.gender || 'Male', country: res?.country || targetUser.country || COUNTRIES[0],
       isOnline: res?.isOnline ?? targetUser.isOnline, lastSeen: res?.lastSeen ?? targetUser.lastSeen,
+      titles: res?.titles || targetUser.titles || [],
+      showAdminBadge: res?.showAdminBadge ?? targetUser.showAdminBadge ?? true,
     };
   };
   const [fullUserData, setFullUserData] = useState(buildInitialUser);
@@ -2008,28 +2064,28 @@ const UserProfileView = ({
       }
       setLoading(false);
     }, () => setLoading(false));
-    const unsubGifts = uDoc(targetUser.uid).collection('receivedGifts').orderBy('createdAt', 'desc').onSnapshot((snap) => {
-      setReceivedGifts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    }, () => {});
+    const unsubGifts = uDoc(targetUser.uid).collection('receivedGifts').orderBy('createdAt', 'desc').onSnapshot((snap) => { setReceivedGifts(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); }, () => {});
     return () => { unsubUser(); unsubGifts(); };
   }, [demoMode, demoReceivedGifts, demoUsersMap, targetUser]);
 
+  // ============ VISITOR RECORDING: fixed with 1h cooldown ============
   useEffect(() => {
     if (demoMode || isMe || !currentUser?.uid || !targetUser?.uid || targetUser.uid === currentUser.uid) return;
-    db.collection('profileViews').add({
-      visitedUid: targetUser.uid,
-      visitorUid: currentUser.uid,
-      visitorName: currentProfile.displayName || 'User',
-      visitorImg: currentProfile.photoURL || '',
-      timestamp: FV.serverTimestamp()
-    }).catch(e => console.log(e));
+    try {
+      const key = `viewed_${targetUser.uid}`;
+      const last = parseInt(localStorage.getItem(key) || '0', 10);
+      if (Date.now() - last < 3600000) return;
+      localStorage.setItem(key, String(Date.now()));
+    } catch {}
+    db.collection('profileViews').add({ visitedUid: targetUser.uid, visitorUid: currentUser.uid, visitorName: currentProfile.displayName || 'User', visitorImg: currentProfile.photoURL || '', timestamp: FV.serverTimestamp() }).catch((e) => console.log('view record:', e));
   }, [targetUser?.uid, currentUser?.uid, demoMode, isMe, currentProfile?.displayName, currentProfile?.photoURL]);
 
-  if (loading) return <div className="h-full flex items-center justify-center bg-[#ffffff] text-[#1a1a2e] font-bold">Loading Profile...</div>;
+  if (loading) return <div className="h-full flex items-center justify-center bg-white text-[#1a1a2e] font-bold">Loading Profile...</div>;
   const user = fullUserData;
   const isFriend = currentProfile?.friends?.includes(user.uid);
   const requestSent = currentProfile?.sentRequests?.includes(user.uid);
-  const isTargetAdmin = user.displayId === ADMIN_DISPLAY_ID;
+  const isTargetOfficial = isOfficialDisplayId(user.displayId);
+  const isViewerOfficial = isOfficialDisplayId(currentProfile?.displayId);
   const targetCountry = user.country || COUNTRIES[0];
   const online = isUserOnline(user);
   const groupedGifts = groupReceivedGifts(receivedGifts);
@@ -2037,12 +2093,10 @@ const UserProfileView = ({
   const totalGiftsCount = receivedGifts.reduce((sum, g) => sum + (Number(g.count) || 1), 0);
   const totalCharmsFromGifts = receivedGifts.reduce((sum, g) => sum + (Number(g.charms) || 0), 0);
   const displayTotalCharms = Math.max(Number(user.charms) || 0, totalCharmsFromGifts);
-  const openSenderProfile = (sender) => {
-    setShowGiftWallModal(false); setShowAllGuardsModal(false);
-    onSelectProfile?.({ uid: sender.uid, displayName: sender.name, photoURL: sender.img || '' });
-  };
+  const activeTitles = getActiveTitles(user.titles);
+  const openSenderProfile = (sender) => { setShowGiftWallModal(false); setShowAllGuardsModal(false); onSelectProfile?.({ uid: sender.uid, displayName: sender.name, photoURL: sender.img || '' }); };
 
-  const amISuperAdmin = currentProfile?.displayId === ADMIN_DISPLAY_ID;
+  const amISuperAdmin = isOfficialDisplayId(currentProfile?.displayId);
   const amIAdmin = amISuperAdmin || currentProfile?.isAdmin;
   const myPermissions = currentProfile?.adminPermissions || [];
   const canManageCharms = amISuperAdmin || myPermissions.includes('manage_charms');
@@ -2058,28 +2112,24 @@ const UserProfileView = ({
   };
   const handleModifyCharms = async (action) => {
     const val = parseInt(charmInput, 10);
-    if (isNaN(val) || val <= 0) return onNotice('Enter a valid positive number');
-    try { await uDoc(user.uid).update({ charms: FV.increment(action === 'add' ? val : -val) }); onNotice(`Successfully ${action === 'add' ? 'added' : 'removed'} ${val} charms!`); setCharmInput(''); }
-    catch (e) { onNotice(`Error updating charms: ${errMsg(e)}`); }
+    if (isNaN(val) || val <= 0) return onNotice('Enter valid positive number');
+    try { await uDoc(user.uid).update({ charms: FV.increment(action === 'add' ? val : -val) }); onNotice(`${action === 'add' ? 'Added' : 'Removed'} ${val} charms!`); setCharmInput(''); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
   const handleSendCoins = async () => {
     const val = parseInt(coinInput, 10);
-    if (isNaN(val) || val <= 0) return onNotice('Enter a valid positive number');
-    try { await uDoc(user.uid).update({ coins: FV.increment(val) }); onNotice(`Successfully sent ${val} coins!`); setCoinInput(''); }
-    catch (e) { onNotice(`Error sending coins: ${errMsg(e)}`); }
+    if (isNaN(val) || val <= 0) return onNotice('Enter valid positive number');
+    try { await uDoc(user.uid).update({ coins: FV.increment(val) }); onNotice(`Sent ${val} coins!`); setCoinInput(''); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
   const handleTemporaryBan = async () => {
     const duration = parseInt(banDuration, 10);
-    if (isNaN(duration) || duration <= 0) return onNotice('Enter a valid duration');
-    try { await uDoc(user.uid).update({ isBanned: true, banExpiresAt: Date.now() + duration * parseInt(banUnit, 10) }); onNotice('User banned temporarily!'); setBanDuration(''); }
+    if (isNaN(duration) || duration <= 0) return onNotice('Enter valid duration');
+    try { await uDoc(user.uid).update({ isBanned: true, banExpiresAt: Date.now() + duration * parseInt(banUnit, 10) }); onNotice('Banned temporarily!'); setBanDuration(''); }
     catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
-  const handlePermanentBan = async () => {
-    try { await uDoc(user.uid).update({ isBanned: true, banExpiresAt: null }); onNotice('User permanently banned!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
-  };
-  const handleUnban = async () => {
-    try { await uDoc(user.uid).update({ isBanned: false, banExpiresAt: null }); onNotice('User unbanned!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
-  };
+  const handlePermanentBan = async () => { try { await uDoc(user.uid).update({ isBanned: true, banExpiresAt: null }); onNotice('Permanently banned!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); } };
+  const handleUnban = async () => { try { await uDoc(user.uid).update({ isBanned: false, banExpiresAt: null }); onNotice('Unbanned!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); } };
   const handleMakeAdmin = async () => {
     const perms = [];
     if (document.getElementById('p_charm')?.checked) perms.push('manage_charms');
@@ -2087,63 +2137,58 @@ const UserProfileView = ({
     if (document.getElementById('p_ban')?.checked) perms.push('ban_users');
     if (document.getElementById('p_admin')?.checked) perms.push('manage_admins');
     if (perms.length === 0) return onNotice('Select at least one permission');
-    try { await uDoc(user.uid).update({ isAdmin: true, adminPermissions: perms }); onNotice('Admin privileges granted!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+    try { await uDoc(user.uid).update({ isAdmin: true, adminPermissions: perms }); onNotice('Admin granted!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
-  const handleRemoveAdmin = async () => {
-    try { await uDoc(user.uid).update({ isAdmin: false, adminPermissions: [] }); onNotice('Admin privileges revoked!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+  const handleRemoveAdmin = async () => { try { await uDoc(user.uid).update({ isAdmin: false, adminPermissions: [] }); onNotice('Admin revoked!'); } catch (e) { onNotice(`Error: ${errMsg(e)}`); } };
+  const toggleAdminBadge = async () => {
+    try { const next = user.showAdminBadge === false ? true : false; await uDoc(user.uid).update({ showAdminBadge: next }); onNotice(next ? 'Admin badge shown' : 'Admin badge hidden'); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
   const openChat = () => setCurrentChat({ chatId: [currentUser.uid, user.uid].sort().join('_'), otherUser: user });
 
   return (
-    <div className="fixed inset-0 bg-[#ffffff] max-w-[430px] mx-auto text-[#1a1a2e] flex flex-col" style={{ colorScheme: 'light' }}>
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-24 relative bg-[#ffffff]">
+    <div className="fixed inset-0 bg-white max-w-[430px] mx-auto text-[#1a1a2e] flex flex-col" style={{ colorScheme: 'light' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-24 relative bg-white">
         <div className="h-56 bg-slate-200 relative shrink-0">
           <BannerCover src={user.bannerURL} />
-          <Btn onClick={onBack} aria-label="Back" className="absolute top-4 left-4 text-white bg-black/50 hover:bg-black/70 w-10 h-10 flex items-center justify-center rounded-full font-bold z-50 backdrop-blur-sm">←</Btn>
-          {amIAdmin && !isMe && !demoMode && <Btn onClick={() => setShowAdminMenu(true)} aria-label="Admin controls" className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 w-10 h-10 flex items-center justify-center rounded-full font-bold text-2xl leading-none shadow-lg z-50 backdrop-blur-sm">⋮</Btn>}
+          <Btn onClick={onBack} className="absolute top-4 left-4 text-white bg-black/50 hover:bg-black/70 w-10 h-10 flex items-center justify-center rounded-full font-bold z-50 backdrop-blur-sm">←</Btn>
+          {amIAdmin && !isMe && !demoMode && <Btn onClick={() => setShowAdminMenu(true)} className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 w-10 h-10 flex items-center justify-center rounded-full font-bold text-2xl shadow-lg z-50 backdrop-blur-sm">⋮</Btn>}
         </div>
-        <div className="bg-[#ffffff] rounded-t-3xl -mt-6 relative px-4 pt-4 pb-6 min-h-[50vh]">
+        <div className="bg-white rounded-t-3xl -mt-6 relative px-4 pt-4 pb-6 min-h-[50vh]">
           <div className="flex items-end justify-between mb-3">
-            <UserAvatar src={user.photoURL} name={user.displayName} className="w-24 h-24 rounded-full border-4 border-[#ffffff] -mt-14 shadow-md bg-slate-100" />
+            <UserAvatar src={user.photoURL} name={user.displayName} className="w-24 h-24 rounded-full border-4 border-white -mt-14 shadow-md bg-slate-100" />
             <OnlineBadge online={online} light />
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h2 className="text-2xl font-extrabold text-[#1a1a2e] flex items-center gap-1.5">{user.displayName} <span className="text-xl">{getGenderEmoji(user.gender)}</span></h2>
-            {isTargetAdmin && <span className="star-official-badge px-2 py-0.5 rounded text-xs font-bold">⭐ Star Official</span>}
-            {user.isAdmin && !isTargetAdmin && <span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold">Admin</span>}
+            {isTargetOfficial && <span className="star-official-badge px-2 py-0.5 rounded text-xs font-bold">⭐ Star Official</span>}
+            {user.isAdmin && !isTargetOfficial && user.showAdminBadge !== false && <span className="bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded text-xs font-bold">Admin</span>}
             {user.isBanned && <span className="bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded text-xs font-bold">Banned</span>}
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="bg-pink-50 text-pink-600 border border-pink-200 text-xs font-bold px-2.5 py-0.5 rounded-full tabular-nums">Lv.{user.level || 1}</span>
-            {!isTargetAdmin && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 tabular-nums"><CharmIcon charms={displayTotalCharms} size="text-sm" /> {displayTotalCharms}</span>}
+            {!isTargetOfficial && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 tabular-nums"><CharmIcon charms={displayTotalCharms} size="text-sm" /> {displayTotalCharms}</span>}
             <span className="ml-auto text-sm font-semibold text-slate-600">{targetCountry.flag} {targetCountry.name}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600 mb-4 bg-[#f8f9fa] border border-slate-200 w-fit px-3 py-1 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-slate-600 mb-3 bg-[#f8f9fa] border border-slate-200 w-fit px-3 py-1 rounded-lg">
             <span className="font-semibold tabular-nums">ID: {user.displayId}</span>
-            <Btn onClick={() => { navigator.clipboard?.writeText(user.displayId); onNotice('ID Copied!'); }} className="cursor-pointer hover:text-[#1a1a2e] font-bold" aria-label="Copy ID">📋</Btn>
+            <Btn onClick={() => { navigator.clipboard?.writeText(user.displayId); onNotice('ID Copied!'); }} className="hover:text-[#1a1a2e] font-bold" aria-label="Copy ID">📋</Btn>
           </div>
+          {activeTitles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {activeTitles.map((t) => <TitleBadge key={t.id} title={t} size="md" />)}
+            </div>
+          )}
           <div className="mb-4 bg-[#f8f9fa] border border-slate-200 rounded-2xl p-4">
             <h3 className="font-bold text-sm text-[#1a1a2e] mb-1">Bio</h3>
             <p className="text-slate-600 text-sm leading-relaxed">{user.bio || 'This user is mysterious.'}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Btn onClick={() => onNotice('🚧 Tags Coming Soon!')} className="bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-3.5 text-left transition-colors min-h-[68px]">
-              <div className="flex items-center justify-between mb-1"><span className="text-sm font-extrabold text-[#1a1a2e]">🏷️ Tags</span><span className="text-slate-400 text-base font-bold">›</span></div>
-              <p className="text-xs text-slate-500">Tap to view badges &amp; tags</p>
-            </Btn>
-            <Btn onClick={() => onNotice('🚧 Advanced Rooms Coming Soon!')} className="bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-3.5 text-left transition-colors min-h-[68px]">
-              <div className="flex items-center justify-between mb-1"><span className="text-sm font-extrabold text-[#1a1a2e]">🎙️ Advanced Rooms</span><span className="text-slate-400 text-base font-bold">›</span></div>
-              <p className="text-xs text-slate-500">Owned VIP voice rooms</p>
-            </Btn>
+            <Btn onClick={() => onNotice('🚧 Tags Coming Soon!')} className="bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-3.5 text-left min-h-[68px]"><div className="flex items-center justify-between mb-1"><span className="text-sm font-extrabold text-[#1a1a2e]">🏷️ Tags</span><span className="text-slate-400 text-base font-bold">›</span></div><p className="text-xs text-slate-500">Tap to view badges</p></Btn>
+            <Btn onClick={() => onNotice('🚧 Advanced Rooms Coming Soon!')} className="bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-3.5 text-left min-h-[68px]"><div className="flex items-center justify-between mb-1"><span className="text-sm font-extrabold text-[#1a1a2e]">🎙️ Advanced Rooms</span><span className="text-slate-400 text-base font-bold">›</span></div><p className="text-xs text-slate-500">Owned VIP voice rooms</p></Btn>
           </div>
-          <Btn onClick={() => setShowGiftWallModal(true)} className="w-full bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 mb-4 text-left transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-9 h-9 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-xl">🎁</span>
-                <div><h3 className="font-extrabold text-base text-[#1a1a2e] leading-tight">Gift Wall</h3><p className="text-xs text-slate-500">Tap to view received gifts &amp; senders</p></div>
-              </div>
-              <span className="text-slate-400 text-xl font-bold">›</span>
-            </div>
+          <Btn onClick={() => setShowGiftWallModal(true)} className="w-full bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 mb-4 text-left">
+            <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className="w-9 h-9 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-xl">🎁</span><div><h3 className="font-extrabold text-base text-[#1a1a2e] leading-tight">Gift Wall</h3><p className="text-xs text-slate-500">Tap to view received gifts</p></div></div><span className="text-slate-400 text-xl font-bold">›</span></div>
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
               <div><p className="text-[11px] font-semibold text-slate-500">Total Charms</p><p className="text-lg font-extrabold text-amber-600 tabular-nums">✨ {displayTotalCharms}</p></div>
               <div><p className="text-[11px] font-semibold text-slate-500">Total Gifts</p><p className="text-lg font-extrabold text-[#1a1a2e] tabular-nums">🎁 {totalGiftsCount}</p></div>
@@ -2152,20 +2197,16 @@ const UserProfileView = ({
           <div className="bg-[#f8f9fa] border border-slate-200 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div><h3 className="font-extrabold text-base text-[#1a1a2e]">🛡️ Guard List</h3><p className="text-xs text-slate-500">1 Charm received = 1 Guard Point</p></div>
-              <Btn onClick={() => setShowAllGuardsModal(true)} className="text-xs font-bold text-[#ff4d9a] hover:underline px-2 py-1 min-h-[36px]">View All ›</Btn>
+              <Btn onClick={() => setShowAllGuardsModal(true)} className="text-xs font-bold text-[#ff4d9a] px-2 py-1 min-h-[36px]">View All ›</Btn>
             </div>
-            {guardList.length === 0 ? <p className="text-xs text-slate-500 py-3 text-center">No guards yet. Send a gift to become #1 Guard!</p> : (
+            {guardList.length === 0 ? <p className="text-xs text-slate-500 py-3 text-center">No guards yet.</p> : (
               <div className="space-y-2.5">
                 {guardList.slice(0, 3).map((guard, index) => {
                   const rankBadge = index === 0 ? '👑' : index === 1 ? '🥈' : '🥉';
                   const rankStyle = index === 0 ? 'bg-amber-50 border-amber-300 text-amber-900' : index === 1 ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-orange-50 border-orange-200 text-orange-900';
                   return (
-                    <Btn key={guard.uid} onClick={() => openSenderProfile(guard)} className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition ${rankStyle}`}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xl w-6 text-center shrink-0">{rankBadge}</span>
-                        <UserAvatar src={guard.img} name={guard.name} className="w-10 h-10 rounded-full border border-white shadow-sm shrink-0" />
-                        <div className="min-w-0"><p className="font-bold text-sm truncate">{guard.name}</p><p className="text-[11px] opacity-75">Rank #{index + 1}</p></div>
-                      </div>
+                    <Btn key={guard.uid} onClick={() => openSenderProfile(guard)} className={`w-full flex items-center justify-between p-3 rounded-xl border text-left ${rankStyle}`}>
+                      <div className="flex items-center gap-3 min-w-0"><span className="text-xl w-6 text-center shrink-0">{rankBadge}</span><UserAvatar src={guard.img} name={guard.name} className="w-10 h-10 rounded-full border border-white shadow-sm shrink-0" /><div className="min-w-0"><p className="font-bold text-sm truncate">{guard.name}</p><p className="text-[11px] opacity-75">Rank #{index + 1}</p></div></div>
                       <span className="text-xs font-extrabold tabular-nums shrink-0 ml-2">{guard.guardPoints} pts</span>
                     </Btn>
                   );
@@ -2175,44 +2216,30 @@ const UserProfileView = ({
           </div>
         </div>
       </div>
-      
-      <div className="absolute bottom-0 w-full bg-[#ffffff] border-t border-slate-200 p-3 flex gap-2 z-50">
+      <div className="absolute bottom-0 w-full bg-white border-t border-slate-200 p-3 flex gap-2 z-50">
         {isMe ? (
-          <Btn onClick={() => onNotice('Gift feature coming soon!')} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">🎁 Gift</Btn>
+          <Btn onClick={() => onNotice('Gift coming soon!')} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">🎁 Gift</Btn>
         ) : (
           <>
-            {!isFriend && !requestSent && <Btn onClick={sendRequest} className="flex-1 bg-blue-600 text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">➕ Add Friend</Btn>}
-            {requestSent && <Btn disabled className="flex-1 bg-slate-200 text-slate-500 rounded-full py-3 font-bold min-h-[44px]">Request Sent</Btn>}
-            {isFriend && <Btn onClick={openChat} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">💬 Message</Btn>}
+            {isViewerOfficial && <Btn onClick={openChat} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">💬 Message</Btn>}
+            {!isViewerOfficial && !isFriend && !requestSent && <Btn onClick={sendRequest} className="flex-1 bg-blue-600 text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">➕ Add Friend</Btn>}
+            {!isViewerOfficial && requestSent && <Btn disabled className="flex-1 bg-slate-200 text-slate-500 rounded-full py-3 font-bold min-h-[44px]">Request Sent</Btn>}
+            {!isViewerOfficial && isFriend && <Btn onClick={openChat} className="flex-1 bg-[var(--color-rose)] text-white rounded-full py-3 font-bold shadow-sm min-h-[44px]">💬 Message</Btn>}
           </>
         )}
       </div>
-
       {showGiftWallModal && (
         <SheetModal light zClass="z-[3500]" maxH="max-h-[80vh] overflow-y-auto no-scrollbar pb-8" onClose={() => setShowGiftWallModal(false)}>
           <Grabber light />
-          <div className="flex justify-between items-center mb-4">
-            <div><h3 className="text-lg font-extrabold text-[#1a1a2e]">🎁 Gift Wall</h3><p className="text-xs text-slate-500">{totalGiftsCount} Gifts · {displayTotalCharms} Charms received</p></div>
-            <Btn onClick={() => setShowGiftWallModal(false)} className="text-slate-500 hover:text-[#1a1a2e] text-2xl font-bold px-2">×</Btn>
-          </div>
+          <div className="flex justify-between items-center mb-4"><div><h3 className="text-lg font-extrabold text-[#1a1a2e]">🎁 Gift Wall</h3><p className="text-xs text-slate-500">{totalGiftsCount} Gifts · {displayTotalCharms} Charms</p></div><Btn onClick={() => setShowGiftWallModal(false)} className="text-slate-500 text-2xl font-bold px-2">×</Btn></div>
           {groupedGifts.length === 0 ? <p className="text-center text-slate-500 text-sm py-8">No gifts received yet.</p> : (
             <div className="grid grid-cols-2 gap-3">
               {groupedGifts.map((group) => (
                 <div key={group.key} className="bg-[#f8f9fa] border border-slate-200 rounded-2xl p-3 flex flex-col justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl shrink-0">{group.giftType === 'image' ? <img src={group.giftIcon} alt={group.giftName} className="w-8 h-8 object-contain" /> : group.giftIcon}</span>
-                    <div className="min-w-0">
-                      <p className="font-extrabold text-sm text-[#1a1a2e] truncate">{group.giftName} × {group.totalCount}</p>
-                      <p className="text-[11px] font-semibold text-amber-600 tabular-nums">+{group.totalCharms} Charms</p>
-                    </div>
-                  </div>
+                  <div className="flex items-center gap-2.5"><span className="text-2xl shrink-0">{group.giftType === 'image' ? <img src={group.giftIcon} alt={group.giftName} className="w-8 h-8 object-contain" /> : group.giftIcon}</span><div className="min-w-0"><p className="font-extrabold text-sm text-[#1a1a2e] truncate">{group.giftName} × {group.totalCount}</p><p className="text-[11px] font-semibold text-amber-600 tabular-nums">+{group.totalCharms} Charms</p></div></div>
                   <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200 overflow-x-auto no-scrollbar">
                     <span className="text-[10px] font-semibold text-slate-500 shrink-0">From:</span>
-                    {group.senders.map((sender) => (
-                      <Btn key={sender.uid} title={`Open ${sender.name}'s profile`} aria-label={`Open ${sender.name}'s profile`} onClick={() => openSenderProfile(sender)} className="relative shrink-0 rounded-full hover:scale-105 transition-transform">
-                        <UserAvatar src={sender.img} name={sender.name} className="w-7 h-7 rounded-full border border-slate-300" />
-                      </Btn>
-                    ))}
+                    {group.senders.map((sender) => (<Btn key={sender.uid} onClick={() => openSenderProfile(sender)} className="relative shrink-0 rounded-full"><UserAvatar src={sender.img} name={sender.name} className="w-7 h-7 rounded-full border border-slate-300" /></Btn>))}
                   </div>
                 </div>
               ))}
@@ -2223,20 +2250,13 @@ const UserProfileView = ({
       {showAllGuardsModal && (
         <SheetModal light zClass="z-[3500]" maxH="max-h-[80vh] overflow-y-auto no-scrollbar pb-8" onClose={() => setShowAllGuardsModal(false)}>
           <Grabber light />
-          <div className="flex justify-between items-center mb-4">
-            <div><h3 className="text-lg font-extrabold text-[#1a1a2e]">🛡️ Full Guard List</h3><p className="text-xs text-slate-500">1 Charm received = 1 Guard Point</p></div>
-            <Btn onClick={() => setShowAllGuardsModal(false)} className="text-slate-500 hover:text-[#1a1a2e] text-2xl font-bold px-2">×</Btn>
-          </div>
-          {guardList.length === 0 ? <p className="text-center text-slate-500 text-sm py-8">No supporters recorded yet.</p> : (
+          <div className="flex justify-between items-center mb-4"><div><h3 className="text-lg font-extrabold text-[#1a1a2e]">🛡️ Full Guard List</h3><p className="text-xs text-slate-500">1 Charm received = 1 Guard Point</p></div><Btn onClick={() => setShowAllGuardsModal(false)} className="text-slate-500 text-2xl font-bold px-2">×</Btn></div>
+          {guardList.length === 0 ? <p className="text-center text-slate-500 text-sm py-8">No supporters yet.</p> : (
             <div className="space-y-2.5">
               {guardList.map((guard, index) => (
-                <Btn key={guard.uid} onClick={() => openSenderProfile(guard)} className="w-full flex items-center justify-between p-3 rounded-xl bg-[#f8f9fa] border border-slate-200 hover:bg-slate-100 text-left transition">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-sm font-extrabold text-slate-500 w-6 text-center tabular-nums">{index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}</span>
-                    <UserAvatar src={guard.img} name={guard.name} className="w-10 h-10 rounded-full border border-slate-300 shrink-0" />
-                    <div className="min-w-0"><p className="font-bold text-sm text-[#1a1a2e] truncate">{guard.name}</p><p className="text-[11px] text-slate-500 tabular-nums">{guard.totalGifts} gifts sent</p></div>
-                  </div>
-                  <span className="text-xs font-extrabold text-amber-600 tabular-nums shrink-0">{guard.guardPoints} Guard Pts</span>
+                <Btn key={guard.uid} onClick={() => openSenderProfile(guard)} className="w-full flex items-center justify-between p-3 rounded-xl bg-[#f8f9fa] border border-slate-200 hover:bg-slate-100 text-left">
+                  <div className="flex items-center gap-3 min-w-0"><span className="text-sm font-extrabold text-slate-500 w-6 text-center tabular-nums">{index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}</span><UserAvatar src={guard.img} name={guard.name} className="w-10 h-10 rounded-full border border-slate-300 shrink-0" /><div className="min-w-0"><p className="font-bold text-sm text-[#1a1a2e] truncate">{guard.name}</p><p className="text-[11px] text-slate-500 tabular-nums">{guard.totalGifts} gifts sent</p></div></div>
+                  <span className="text-xs font-extrabold text-amber-600 tabular-nums shrink-0">{guard.guardPoints} Pts</span>
                 </Btn>
               ))}
             </div>
@@ -2246,74 +2266,23 @@ const UserProfileView = ({
       {showAdminMenu && (
         <div className="fixed inset-0 bg-black/80 z-[4000] flex items-center justify-center p-4">
           <div className="bg-[#0c0c10] border border-white/15 rounded-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh] shadow-2xl text-white">
-            <div className="bg-black p-4 flex justify-between items-center border-b border-white/10">
-              <h3 className="font-bold text-lg flex items-center gap-2">⚙️ Admin Controls</h3>
-              <Btn onClick={() => setShowAdminMenu(false)} className="text-2xl font-bold leading-none">×</Btn>
-            </div>
+            <div className="bg-black p-4 flex justify-between items-center border-b border-white/10"><h3 className="font-bold text-lg">⚙️ Admin Controls</h3><Btn onClick={() => setShowAdminMenu(false)} className="text-2xl font-bold leading-none">×</Btn></div>
             <div className="p-4 overflow-y-auto no-scrollbar space-y-5">
-              {canManageCharms && (
-                <div className={C_ADMIN_BOX}>
-                  <h4 className="font-bold text-sm mb-3">✨ Manage Charms</h4>
-                  <div className="flex gap-2">
-                    <input type="number" placeholder="Amount" className={C_INP_AD} value={charmInput} onChange={(e) => setCharmInput(e.target.value)} />
-                    <Btn onClick={() => handleModifyCharms('add')} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+ Add</Btn>
-                    <Btn onClick={() => handleModifyCharms('remove')} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-bold">- Remove</Btn>
-                  </div>
-                </div>
-              )}
-              {canSendCoins && (
-                <div className={C_ADMIN_BOX}>
-                  <h4 className="font-bold text-sm mb-3">🪙 Send Coins</h4>
-                  <div className="flex gap-2">
-                    <input type="number" placeholder="Amount" className={C_INP_AD} value={coinInput} onChange={(e) => setCoinInput(e.target.value)} />
-                    <Btn onClick={handleSendCoins} className="bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-bold">Send</Btn>
-                  </div>
-                </div>
-              )}
-              {canBan && (
-                <div className={C_ADMIN_BOX}>
-                  <h4 className="font-bold text-sm mb-3">🚫 Ban Controls</h4>
-                  {user.isBanned ? (
-                    <div className="space-y-2">
-                      <p className="text-xs text-red-300 font-bold bg-red-500/20 p-2 rounded-lg">Status: Banned {user.banExpiresAt ? `(Until: ${new Date(user.banExpiresAt).toLocaleString()})` : '(Permanent)'}</p>
-                      <Btn onClick={handleUnban} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold text-sm">Unban User</Btn>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <input type="number" placeholder="Time" className={C_ADM_INP} value={banDuration} onChange={(e) => setBanDuration(e.target.value)} />
-                        <select className="w-1/2 bg-black border border-white/15 rounded-lg px-2 py-2 text-sm text-white outline-none" value={banUnit} onChange={(e) => setBanUnit(e.target.value)}>
-                          <option value="60000">Minutes</option><option value="3600000">Hours</option><option value="86400000">Days</option>
-                        </select>
-                      </div>
-                      <div className="flex gap-2">
-                        <Btn onClick={handleTemporaryBan} className="flex-1 bg-orange-600 text-white py-2 rounded-lg text-sm font-bold">Temp Ban</Btn>
-                        <Btn onClick={handlePermanentBan} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-bold">Perm Ban</Btn>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {canManageCharms && (<div className={C_ADMIN_BOX}><h4 className="font-bold text-sm mb-3">✨ Manage Charms</h4><div className="flex gap-2"><input type="number" placeholder="Amount" className={C_INP_AD} value={charmInput} onChange={(e) => setCharmInput(e.target.value)} /><Btn onClick={() => handleModifyCharms('add')} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">+ Add</Btn><Btn onClick={() => handleModifyCharms('remove')} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-bold">- Remove</Btn></div></div>)}
+              {canSendCoins && (<div className={C_ADMIN_BOX}><h4 className="font-bold text-sm mb-3">🪙 Send Coins</h4><div className="flex gap-2"><input type="number" placeholder="Amount" className={C_INP_AD} value={coinInput} onChange={(e) => setCoinInput(e.target.value)} /><Btn onClick={handleSendCoins} className="bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-bold">Send</Btn></div></div>)}
+              {canBan && (<div className={C_ADMIN_BOX}><h4 className="font-bold text-sm mb-3">🚫 Ban Controls</h4>{user.isBanned ? (<div className="space-y-2"><p className="text-xs text-red-300 font-bold bg-red-500/20 p-2 rounded-lg">Status: Banned {user.banExpiresAt ? `(Until: ${new Date(user.banExpiresAt).toLocaleString()})` : '(Permanent)'}</p><Btn onClick={handleUnban} className="w-full bg-green-600 text-white py-2 rounded-lg font-bold text-sm">Unban User</Btn></div>) : (<div className="space-y-3"><div className="flex gap-2"><input type="number" placeholder="Time" className={C_ADM_INP} value={banDuration} onChange={(e) => setBanDuration(e.target.value)} /><select className="w-1/2 bg-black border border-white/15 rounded-lg px-2 py-2 text-sm text-white" value={banUnit} onChange={(e) => setBanUnit(e.target.value)}><option value="60000">Minutes</option><option value="3600000">Hours</option><option value="86400000">Days</option></select></div><div className="flex gap-2"><Btn onClick={handleTemporaryBan} className="flex-1 bg-orange-600 text-white py-2 rounded-lg text-sm font-bold">Temp Ban</Btn><Btn onClick={handlePermanentBan} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-bold">Perm Ban</Btn></div></div>)}</div>)}
               {canManageAdmins && !isMe && (
                 <div className={C_ADMIN_BOX}>
                   <h4 className="font-bold text-sm mb-3">👑 Admin Access</h4>
-                  {user.isAdmin && !isTargetAdmin ? (
-                    <div className="space-y-2">
-                      <p className="text-xs text-green-300 font-bold bg-green-500/20 p-2 rounded-lg">This user is an Admin</p>
-                      <p className="text-[11px] text-slate-300"><strong>Permissions:</strong> {user.adminPermissions?.join(', ') || 'None'}</p>
-                      <Btn onClick={handleRemoveAdmin} className="w-full bg-red-500/20 text-red-300 py-2 rounded-lg font-bold text-sm mt-2">Revoke Admin</Btn>
-                    </div>
+                  {user.isAdmin && !isTargetOfficial ? (
+                    <div className="space-y-2"><p className="text-xs text-green-300 font-bold bg-green-500/20 p-2 rounded-lg">This user is Admin</p><p className="text-[11px] text-slate-300"><strong>Perms:</strong> {user.adminPermissions?.join(', ') || 'None'}</p><Btn onClick={handleRemoveAdmin} className="w-full bg-red-500/20 text-red-300 py-2 rounded-lg font-bold text-sm mt-2">Revoke Admin</Btn></div>
                   ) : !user.isAdmin ? (
-                    <div className="space-y-3">
-                      <div className="flex flex-col gap-1.5 text-sm">
-                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="p_charm" defaultChecked /> Manage Charms</label>
-                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="p_coins" defaultChecked /> Send Coins</label>
-                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="p_ban" defaultChecked /> Ban Users</label>
-                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="p_admin" /> Manage Admins</label>
-                      </div>
-                      <Btn onClick={handleMakeAdmin} className="w-full bg-[var(--color-rose)] text-white py-2 rounded-lg font-bold text-sm mt-2">Grant Admin</Btn>
-                    </div>
+                    <div className="space-y-3"><div className="flex flex-col gap-1.5 text-sm"><label className="flex items-center gap-2"><input type="checkbox" id="p_charm" defaultChecked /> Manage Charms</label><label className="flex items-center gap-2"><input type="checkbox" id="p_coins" defaultChecked /> Send Coins</label><label className="flex items-center gap-2"><input type="checkbox" id="p_ban" defaultChecked /> Ban Users</label><label className="flex items-center gap-2"><input type="checkbox" id="p_admin" /> Manage Admins</label></div><Btn onClick={handleMakeAdmin} className="w-full bg-[var(--color-rose)] text-white py-2 rounded-lg font-bold text-sm mt-2">Grant Admin</Btn></div>
                   ) : null}
+                  <div className="border-t border-white/10 mt-3 pt-3">
+                    <h4 className="font-bold text-sm mb-2">🎭 Admin Badge</h4>
+                    <Btn onClick={toggleAdminBadge} className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold text-sm">{user.showAdminBadge === false ? '👁️ Show Badge' : '🙈 Hide Badge'}</Btn>
+                  </div>
                 </div>
               )}
             </div>
@@ -2327,10 +2296,7 @@ const UserProfileView = ({
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, errorInfo: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, errorInfo: error.toString() }; }
-  render() {
-    if (this.state.hasError) return <div className="p-5 bg-red-950 text-red-200 h-full font-mono"><h1>App Error:</h1><p>{this.state.errorInfo}</p></div>;
-    return this.props.children;
-  }
+  render() { if (this.state.hasError) return <div className="p-5 bg-red-950 text-red-200 h-full font-mono"><h1>App Error:</h1><p>{this.state.errorInfo}</p></div>; return this.props.children; }
 }
 
 const NavBtn = ({ icon, label, active, onClick, color }) => (
@@ -2346,20 +2312,19 @@ const DEMO_PROFILE = {
   friends: ['u1', 'u2'], requests: ['u3'], sentRequests: [], isBanned: false, banExpiresAt: null,
   isAdmin: false, adminPermissions: [], gender: 'Male', birthday: null,
   country: { code: 'IN', name: 'India', flag: '🇮🇳' }, priceTag: { id: 'none', name: 'None', icon: '🚫' },
-  title: { id: 'none', name: 'None' }, visitorExpiry: null, isOnline: true, lastSeen: NOW_REF,
+  visitorExpiry: null, isOnline: true, lastSeen: NOW_REF, titles: [], showAdminBadge: true,
 };
 const DEMO_DIRECTORY_USERS = [
-  { uid: 'u1', displayName: 'Rahul', photoURL: '', bannerURL: '', email: 'rahul@worldstar.local', bio: 'Always hosting chill music rooms!', displayId: '882104912', level: 12, charms: 680, coins: 500, friends: ['demo-me'], requests: [], sentRequests: [], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Male', country: { code: 'IN', name: 'India', flag: '🇮🇳' }, isOnline: true, lastSeen: NOW_REF },
-  { uid: 'u2', displayName: 'Sonia', photoURL: '', bannerURL: '', email: 'sonia@worldstar.local', bio: 'Singer & late night host ✨', displayId: '774920183', level: 15, charms: 2150, coins: 940, friends: ['demo-me'], requests: [], sentRequests: [], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Female', country: { code: 'AE', name: 'UAE', flag: '🇦🇪' }, isOnline: false, lastSeen: NOW_REF - 10 * 60000 },
-  { uid: 'u3', displayName: 'Maya', photoURL: '', bannerURL: '', email: 'maya@worldstar.local', bio: 'New to World Star, say hi!', displayId: '551903442', level: 6, charms: 340, coins: 420, friends: [], requests: [], sentRequests: ['demo-me'], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Female', country: { code: 'US', name: 'USA', flag: '🇺🇸' }, isOnline: true, lastSeen: NOW_REF },
-  { uid: 'u4', displayName: 'Kabir', photoURL: '', bannerURL: '', email: 'kabir@worldstar.local', bio: 'Top gifter & guard captain', displayId: '339104218', level: 19, charms: 900, coins: 3500, friends: [], requests: [], sentRequests: [], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Male', country: { code: 'GB', name: 'UK', flag: '🇬🇧' }, isOnline: false, lastSeen: NOW_REF - 25 * 60000 },
+  { uid: 'u1', displayName: 'Rahul', photoURL: '', bannerURL: '', email: 'rahul@worldstar.local', bio: 'Always hosting chill music rooms!', displayId: '882104912', level: 12, charms: 680, coins: 500, friends: ['demo-me'], requests: [], sentRequests: [], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Male', country: { code: 'IN', name: 'India', flag: '🇮🇳' }, isOnline: true, lastSeen: NOW_REF, titles: [{ id: 'demo-t1', text: 'Legend', emoji: '🔥', glowStyle: 'fire', active: true, expiresAt: null }], showAdminBadge: true },
+  { uid: 'u2', displayName: 'Sonia', photoURL: '', bannerURL: '', email: 'sonia@worldstar.local', bio: 'Singer & late night host ✨', displayId: '774920183', level: 15, charms: 2150, coins: 940, friends: ['demo-me'], requests: [], sentRequests: [], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Female', country: { code: 'AE', name: 'UAE', flag: '🇦🇪' }, isOnline: false, lastSeen: NOW_REF - 10 * 60000, titles: [{ id: 'demo-t2', text: 'Queen', emoji: '👑', glowStyle: 'gold', active: true, expiresAt: null }, { id: 'demo-t3', text: 'VIP', emoji: '💎', glowStyle: 'neon-blue', active: true, expiresAt: null }], showAdminBadge: true },
+  { uid: 'u3', displayName: 'Maya', photoURL: '', bannerURL: '', email: 'maya@worldstar.local', bio: 'New to World Star!', displayId: '551903442', level: 6, charms: 340, coins: 420, friends: [], requests: [], sentRequests: ['demo-me'], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Female', country: { code: 'US', name: 'USA', flag: '🇺🇸' }, isOnline: true, lastSeen: NOW_REF, titles: [], showAdminBadge: true },
+  { uid: 'u4', displayName: 'Kabir', photoURL: '', bannerURL: '', email: 'kabir@worldstar.local', bio: 'Top gifter', displayId: '339104218', level: 19, charms: 900, coins: 3500, friends: [], requests: [], sentRequests: [], isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Male', country: { code: 'GB', name: 'UK', flag: '🇬🇧' }, isOnline: false, lastSeen: NOW_REF - 25 * 60000, titles: [], showAdminBadge: true },
 ];
 const INITIAL_DEMO_GIFTS = {
   u2: [
     { id: 'dg-1', giftId: '2', giftName: 'Crown', giftIcon: '👑', giftType: 'emoji', charms: 1000, count: 1, senderUid: 'u4', senderName: 'Kabir', senderImg: '', createdAt: NOW_REF - 300000 },
     { id: 'dg-2', giftId: '1', giftName: 'Rose', giftIcon: '🌹', giftType: 'emoji', charms: 10, count: 10, senderUid: 'u1', senderName: 'Rahul', senderImg: '', createdAt: NOW_REF - 200000 },
     { id: 'dg-3', giftId: '3', giftName: 'Heart', giftIcon: '💖', giftType: 'emoji', charms: 50, count: 1, senderUid: 'u3', senderName: 'Maya', senderImg: '', createdAt: NOW_REF - 100000 },
-    { id: 'dg-4', giftId: '1', giftName: 'Rose', giftIcon: '🌹', giftType: 'emoji', charms: 10, count: 2, senderUid: 'demo-me', senderName: 'You', senderImg: '', createdAt: NOW_REF - 50000 },
   ],
   u1: [{ id: 'dg-5', giftId: '3', giftName: 'Heart', giftIcon: '💖', giftType: 'emoji', charms: 50, count: 2, senderUid: 'u2', senderName: 'Sonia', senderImg: '', createdAt: NOW_REF - 150000 }],
 };
@@ -2380,12 +2345,7 @@ function WorldStarApp() {
   const [globalNotice, setGlobalNotice] = useState(null);
   const [demoGiftsByUid, setDemoGiftsByUid] = useState(INITIAL_DEMO_GIFTS);
 
-  const demoUsersMap = useMemo(() => {
-    const map = {};
-    DEMO_DIRECTORY_USERS.forEach((u) => { map[u.uid] = u; });
-    if (userProfile) map[userProfile.uid] = userProfile;
-    return map;
-  }, [userProfile]);
+  const demoUsersMap = useMemo(() => { const map = {}; DEMO_DIRECTORY_USERS.forEach((u) => { map[u.uid] = u; }); if (userProfile) map[userProfile.uid] = userProfile; return map; }, [userProfile]);
   const demoFriends = useMemo(() => (userProfile?.friends || []).map((fid) => demoUsersMap[fid]).filter(Boolean), [demoUsersMap, userProfile?.friends]);
   const demoRequests = useMemo(() => (userProfile?.requests || []).map((rid) => demoUsersMap[rid]).filter(Boolean), [demoUsersMap, userProfile?.requests]);
   const showNotice = (msg) => { setGlobalNotice(msg); setTimeout(() => setGlobalNotice((prev) => (prev === msg ? null : prev)), 2800); };
@@ -2400,13 +2360,21 @@ function WorldStarApp() {
           const doc = await docRef.get();
           const now = Date.now();
           if (!doc.exists) {
+            // ============ AUTO-ADD OFFICIAL FRIENDS (on user creation) ============
+            const officialUids = [];
+            for (const oid of OFFICIAL_DISPLAY_IDS) {
+              try {
+                const snap = await db.collection('users').where('displayId', '==', oid).limit(1).get();
+                if (!snap.empty && snap.docs[0].id !== u.uid) officialUids.push(snap.docs[0].id);
+              } catch {}
+            }
             const newData = {
               displayName: u.displayName?.substring(0, 15) || 'User', photoURL: u.photoURL || '', bannerURL: '',
               email: u.email || '', bio: 'Hey there!', uid: u.uid, displayId: Math.floor(100000000 + Math.random() * 900000000).toString(),
-              level: 1, charms: 0, coins: 0, friends: [], requests: [], sentRequests: [],
+              level: 1, charms: 0, coins: 0, friends: officialUids, requests: [], sentRequests: [],
               isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Male', birthday: null,
               country: { code: 'IN', name: 'India', flag: '🇮🇳' }, priceTag: { id: 'none', name: 'None', icon: '🚫' },
-              title: { id: 'none', name: 'None' }, visitorExpiry: null, isOnline: true, lastSeen: now,
+              visitorExpiry: null, isOnline: true, lastSeen: now, titles: [], showAdminBadge: true,
             };
             await docRef.set({ ...newData, createdAt: FV.serverTimestamp() });
             setUserProfile(newData);
@@ -2414,11 +2382,28 @@ function WorldStarApp() {
             const data = doc.data();
             const patch = { isOnline: true, lastSeen: now };
             if (data.isBanned && data.banExpiresAt && now > data.banExpiresAt) { patch.isBanned = false; patch.banExpiresAt = null; data.isBanned = false; data.banExpiresAt = null; }
+            // ============ AUTO-SYNC OFFICIAL FRIENDS (existing users) ============
+            try {
+              const officialUids = [];
+              for (const oid of OFFICIAL_DISPLAY_IDS) {
+                const snap = await db.collection('users').where('displayId', '==', oid).limit(1).get();
+                if (!snap.empty && snap.docs[0].id !== u.uid) officialUids.push(snap.docs[0].id);
+              }
+              const missing = officialUids.filter((id) => !(data.friends || []).includes(id));
+              if (missing.length > 0) { patch.friends = FV.arrayUnion(...missing); data.friends = [...(data.friends || []), ...missing]; }
+            } catch {}
+            // Auto-clean expired titles
+            const now2 = Date.now();
+            const validTitles = (data.titles || []).filter((t) => !t.expiresAt || t.expiresAt > now2);
+            if (validTitles.length !== (data.titles || []).length) { patch.titles = validTitles; data.titles = validTitles; }
             await docRef.update(patch).catch(() => {});
-            setUserProfile({ ...data, isOnline: true, lastSeen: now, coins: Number(data.coins) || 0, charms: Number(data.charms) || 0 });
+            setUserProfile({ ...data, isOnline: true, lastSeen: now, coins: Number(data.coins) || 0, charms: Number(data.charms) || 0, titles: validTitles });
           }
           setView('app');
-        } else { setUser(null); setUserProfile(null); setView('login'); }
+        } else {
+          setUser(null); setUserProfile(null); setView('login');
+          setCurrentRoomId(null); setCurrentChat(null); setViewingProfile(null); setIsMinimized(false); setRoomDetails(null);
+        }
       } catch (error) { console.error(error); }
       finally { setLoading(false); }
     });
@@ -2437,7 +2422,7 @@ function WorldStarApp() {
     return () => { window.clearInterval(heartbeat); document.removeEventListener('visibilitychange', handleVisibility); window.removeEventListener('beforeunload', handleUnload); };
   }, [isAutostartDemo, user?.uid]);
 
-  if (loading) return <div className="h-full flex items-center justify-center bg-[#000000] text-[var(--color-rose)] font-bold text-xl">Loading...</div>;
+  if (loading) return <div className="h-full flex items-center justify-center bg-black text-[var(--color-rose)] font-bold text-xl">Loading...</div>;
   if (view === 'login') {
     return (
       <>
@@ -2446,18 +2431,15 @@ function WorldStarApp() {
       </>
     );
   }
-  if (view === 'app' && (!userProfile || !user)) return <div className="h-full flex items-center justify-center bg-[#000000] text-[var(--color-rose)] font-bold text-xl">Setting up...</div>;
+  if (view === 'app' && (!userProfile || !user)) return <div className="h-full flex items-center justify-center bg-black text-[var(--color-rose)] font-bold text-xl">Setting up...</div>;
   if (userProfile?.isBanned) {
     let banMessage = 'You are permanently banned.';
     if (userProfile.banExpiresAt) {
       const timeLeft = userProfile.banExpiresAt - Date.now();
-      if (timeLeft > 0) {
-        const hours = Math.floor(timeLeft / (1000 * 60 * 60)), mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        banMessage = `You are banned. Time remaining: ${hours > 0 ? hours + 'h ' : ''}${mins}m`;
-      }
+      if (timeLeft > 0) { const hours = Math.floor(timeLeft / (1000 * 60 * 60)), mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)); banMessage = `Banned. Time remaining: ${hours > 0 ? hours + 'h ' : ''}${mins}m`; }
     }
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[#000000] text-white p-6 text-center">
+      <div className="h-full flex flex-col items-center justify-center bg-black text-white p-6 text-center">
         <div className="text-6xl mb-4">🚫</div><h1 className="text-2xl font-bold text-red-500 mb-2">Account Suspended</h1>
         <p className="text-slate-300 mb-6">{banMessage}</p>
         <Btn onClick={() => auth.signOut()} className="bg-[var(--color-rose)] px-6 py-2 rounded-full font-bold">Logout</Btn>
@@ -2469,8 +2451,7 @@ function WorldStarApp() {
       {globalNotice && <div role="status" className="fixed top-4 left-1/2 -translate-x-1/2 z-[9000] px-4 py-2 rounded-xl bg-[#2a2a32] border border-white/20 text-white text-xs font-bold shadow-xl">{globalNotice}</div>}
       {currentRoomId && user && userProfile && (
         <div className={isMinimized ? 'hidden' : 'block w-full h-full'}>
-          <RoomInterface
-            roomId={currentRoomId} user={user} userProfile={userProfile} demoMode={isAutostartDemo}
+          <RoomInterface roomId={currentRoomId} user={user} userProfile={userProfile} demoMode={isAutostartDemo}
             onUpdateLocalCoins={(coins) => setUserProfile((prev) => (prev ? { ...prev, coins } : prev))}
             onUpdateLocalCharms={(charms) => setUserProfile((prev) => (prev ? { ...prev, charms } : prev))}
             onDemoGiftReceived={(targetUid, record) => setDemoGiftsByUid((prev) => ({ ...prev, [targetUid]: [record, ...(prev[targetUid] || [])] }))}
@@ -2481,13 +2462,12 @@ function WorldStarApp() {
         </div>
       )}
       {(!currentRoomId || isMinimized) && user && userProfile && (
-        <div className="fixed inset-0 bg-[#000000] text-white flex flex-col max-w-[430px] mx-auto h-[100dvh]">
+        <div className="fixed inset-0 bg-black text-white flex flex-col max-w-[430px] mx-auto h-[100dvh]">
           <div className="flex-1 overflow-y-auto no-scrollbar pb-2">
             {activeTab === 'home' && <HomeTab user={user} userProfile={userProfile} setActiveTab={setActiveTab} openProfile={(p) => setViewingProfile(p)} onNotice={showNotice} />}
             {activeTab === 'voice' && <VoiceRoomTab user={user} userProfile={userProfile} onJoinRoom={(id) => { setCurrentRoomId(id); setIsMinimized(false); }} onNotice={showNotice} />}
             {activeTab === 'chats' && (
-              <ChatsTab
-                user={user} userProfile={userProfile} openProfile={(p) => setViewingProfile(p)} setCurrentChat={setCurrentChat} onNotice={showNotice}
+              <ChatsTab user={user} userProfile={userProfile} openProfile={(p) => setViewingProfile(p)} setCurrentChat={setCurrentChat} onNotice={showNotice}
                 demoMode={isAutostartDemo} demoFriends={demoFriends} demoRequests={demoRequests}
                 onDemoAcceptRequest={(requesterId) => setUserProfile((prev) => prev ? { ...prev, friends: prev.friends.includes(requesterId) ? prev.friends : [requesterId, ...prev.friends], requests: prev.requests.filter((id) => id !== requesterId) } : prev)}
               />
@@ -2496,27 +2476,25 @@ function WorldStarApp() {
           </div>
           {isMinimized && roomDetails && (
             <div className="absolute bottom-20 left-4 right-4 bg-[#0c0c10] border border-[var(--color-rose)] text-white p-3 rounded-xl flex justify-between items-center z-50 shadow-lg">
-              <Btn onClick={() => setIsMinimized(false)} className="cursor-pointer font-bold flex-1 text-left text-sm truncate">Live Room: {roomDetails.title}</Btn>
-              <Btn aria-label="Leave minimized room" onClick={() => { setCurrentRoomId(null); setIsMinimized(false); setRoomDetails(null); }} className="bg-[#ff2a45] w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ml-2">✕</Btn>
+              <Btn onClick={() => setIsMinimized(false)} className="font-bold flex-1 text-left text-sm truncate">Live Room: {roomDetails.title}</Btn>
+              <Btn onClick={() => { setCurrentRoomId(null); setIsMinimized(false); setRoomDetails(null); }} className="bg-[#ff2a45] w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ml-2">✕</Btn>
             </div>
           )}
           <nav className="w-full h-16 bg-[#0c0c10] border-t border-white/10 flex justify-around items-center px-2 z-50 shrink-0">
             <NavBtn icon="🎮" label="World" active={activeTab === 'home'} onClick={() => setActiveTab('home')} color="text-[#7ee7ff]" />
             <NavBtn icon="🎤" label="Voice" active={activeTab === 'voice'} onClick={() => setActiveTab('voice')} />
             <NavBtn icon="💬" label="Chats" active={activeTab === 'chats'} onClick={() => setActiveTab('chats')} />
-            <NavBtn icon="🧭" label="Discover" active={false} onClick={() => showNotice('Under Maintenance! This feature is coming soon.')} />
+            <NavBtn icon="🧭" label="Discover" active={false} onClick={() => showNotice('Under Maintenance!')} />
             <NavBtn icon="👤" label="Me" active={activeTab === 'me'} onClick={() => setActiveTab('me')} />
           </nav>
-          {userProfile?.displayId === ADMIN_DISPLAY_ID && !showAdminDashboard && <DraggableAdminBtn onClick={() => setShowAdminDashboard(true)} />}
+          {isOfficialDisplayId(userProfile?.displayId) && !showAdminDashboard && <DraggableAdminBtn onClick={() => setShowAdminDashboard(true)} />}
         </div>
       )}
-      {currentChat && user && <ChatRoom chatData={currentChat} user={user} onBack={() => setCurrentChat(null)} openProfile={(p) => setViewingProfile(p)} onNotice={showNotice} demoMode={isAutostartDemo} />}
+      {currentChat && user && <ChatRoom chatData={currentChat} user={user} userProfile={userProfile} onBack={() => setCurrentChat(null)} openProfile={(p) => setViewingProfile(p)} onNotice={showNotice} demoMode={isAutostartDemo} />}
       {viewingProfile && user && userProfile && (
-        <div className="fixed inset-0 z-[3000] bg-[#ffffff]">
-          <UserProfileView
-            targetUser={viewingProfile} currentUser={user} currentProfile={userProfile} onBack={() => setViewingProfile(null)} setCurrentChat={setCurrentChat} onNotice={showNotice}
-            onSelectProfile={(p) => setViewingProfile(p)} demoMode={isAutostartDemo} demoReceivedGifts={demoGiftsByUid[viewingProfile.uid] || []} demoUsersMap={demoUsersMap}
-          />
+        <div className="fixed inset-0 z-[3000] bg-white">
+          <UserProfileView targetUser={viewingProfile} currentUser={user} currentProfile={userProfile} onBack={() => setViewingProfile(null)} setCurrentChat={setCurrentChat} onNotice={showNotice}
+            onSelectProfile={(p) => setViewingProfile(p)} demoMode={isAutostartDemo} demoReceivedGifts={demoGiftsByUid[viewingProfile.uid] || []} demoUsersMap={demoUsersMap} />
         </div>
       )}
       {showAdminDashboard && <AdminDashboard onClose={() => setShowAdminDashboard(false)} onNotice={showNotice} />}
@@ -2524,9 +2502,7 @@ function WorldStarApp() {
   );
 }
 
-function App() {
-  return <ErrorBoundary><WorldStarApp /></ErrorBoundary>;
-}
+function App() { return <ErrorBoundary><WorldStarApp /></ErrorBoundary>; }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
