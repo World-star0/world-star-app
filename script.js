@@ -85,19 +85,14 @@ function checkRoomEntryAccess(room, userId, now = Date.now()) {
   return { allowed: true };
 }
 function joinMemberToRoom(activeMembers, user, ownerId) {
-  const now = Date.now();
-  const existing = activeMembers.find((m) => m.uid === user.uid);
-  if (existing) {
-    // Refresh lastSeen if already present
-    return activeMembers.map((m) => (m.uid === user.uid ? { ...m, name: user.name, img: user.img, lastSeen: now } : m));
-  }
-  return [...activeMembers, { uid: user.uid, name: user.name, img: user.img, seatIndex: ownerId === user.uid ? 0 : null, lastSeen: now }];
+  if (activeMembers.some((m) => m.uid === user.uid)) return activeMembers;
+  return [...activeMembers, { uid: user.uid, name: user.name, img: user.img, seatIndex: ownerId === user.uid ? 0 : null }];
 }
 function assignSeatToMember(activeMembers, userId, seatIndex) {
   if (activeMembers.some((m) => m.seatIndex === seatIndex && m.uid !== userId)) return activeMembers;
-  return activeMembers.map((m) => (m.uid === userId ? { ...m, seatIndex, lastSeen: Date.now() } : m));
+  return activeMembers.map((m) => (m.uid === userId ? { ...m, seatIndex } : m));
 }
-function liftMemberFromSeat(activeMembers, userId) { return activeMembers.map((m) => (m.uid === userId ? { ...m, seatIndex: null, lastSeen: Date.now() } : m)); }
+function liftMemberFromSeat(activeMembers, userId) { return activeMembers.map((m) => (m.uid === userId ? { ...m, seatIndex: null } : m)); }
 function removeMemberOnLeave(activeMembers, leavingUserId, currentOwnerId) {
   const remaining = activeMembers.filter((u) => u.uid !== leavingUserId);
   if (remaining.length === 0) return { nextMembers: [], shouldDeleteRoom: true };
@@ -106,27 +101,6 @@ function removeMemberOnLeave(activeMembers, leavingUserId, currentOwnerId) {
     return { nextMembers: remaining.map((m) => (m.uid === promoted.uid ? { ...m, seatIndex: 0 } : m)), nextOwner: { ...promoted, seatIndex: 0 }, shouldDeleteRoom: false };
   }
   return { nextMembers: remaining, shouldDeleteRoom: false };
-}
-function pruneStaleMembers(activeMembers, ownerId, maxAgeMs = 120 * 1000) {
-  const now = Date.now();
-  const alive = (activeMembers || []).filter((m) => {
-    // Members without lastSeen are kept (legacy data / just joined)
-    if (typeof m.lastSeen !== 'number' || !m.lastSeen) return true;
-    return (now - m.lastSeen) <= maxAgeMs;
-  });
-  if (alive.length === (activeMembers || []).length) return { changed: false, nextMembers: activeMembers || [] };
-  if (alive.length === 0) return { changed: true, nextMembers: [], shouldDeleteRoom: true };
-  // Promote new owner if needed
-  if (ownerId && !alive.some((m) => m.uid === ownerId)) {
-    const promoted = alive[0];
-    return {
-      changed: true,
-      nextMembers: alive.map((m) => (m.uid === promoted.uid ? { ...m, seatIndex: 0 } : m)),
-      nextOwner: { ...promoted, seatIndex: 0 },
-      shouldDeleteRoom: false
-    };
-  }
-  return { changed: true, nextMembers: alive, shouldDeleteRoom: false };
 }
 function getCharmBadgeInfo(charms) {
   if (charms >= 1000000) return { baseEmoji: '👑', level: 9, glowColor: 'rgba(255, 215, 0, 0.9)' };
@@ -140,9 +114,7 @@ function getCharmBadgeInfo(charms) {
   if (charms >= 1000) return { baseEmoji: '⭐', level: null, glowColor: 'rgba(255, 255, 255, 0.4)' };
   return { baseEmoji: '✨', level: null, glowColor: 'rgba(255, 255, 255, 0.4)' };
 }
-function canSendDirectMessage(messages, currentUserId, otherUserId, options = {}) {
-  // Official accounts (or chatting with official) have no restriction
-  if (options.isOfficialSender || options.isOfficialReceiver) return true;
+function canSendDirectMessage(messages, currentUserId, otherUserId) {
   let lastTheirMsgIndex = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].senderId === otherUserId) { lastTheirMsgIndex = i; break; }
@@ -524,10 +496,9 @@ const AdminDashboard = ({ onClose, onNotice }) => {
         <h1 className="text-xl font-bold text-yellow-500">👑 Super Admin Dashboard</h1>
         <Btn onClick={onClose} aria-label="Close admin dashboard" className="text-2xl font-bold text-slate-400 hover:text-white">×</Btn>
       </div>
-      <div className="flex gap-2 p-4 border-b border-white/10 shrink-0 overflow-x-auto no-scrollbar">
-        <Btn onClick={() => setActiveMenu('gifts')} className={`flex-1 min-w-[90px] py-2 rounded-lg font-bold ${activeMenu === 'gifts' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>🎁 Gifts</Btn>
-        <Btn onClick={() => setActiveMenu('titles')} className={`flex-1 min-w-[90px] py-2 rounded-lg font-bold ${activeMenu === 'titles' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>👑 Titles</Btn>
-        <Btn onClick={() => setActiveMenu('users')} className={`flex-1 min-w-[90px] py-2 rounded-lg font-bold ${activeMenu === 'users' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>👥 Users</Btn>
+      <div className="flex gap-2 p-4 border-b border-white/10 shrink-0">
+        <Btn onClick={() => setActiveMenu('gifts')} className={`flex-1 py-2 rounded-lg font-bold ${activeMenu === 'gifts' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>🎁 Manage Gifts</Btn>
+        <Btn onClick={() => setActiveMenu('users')} className={`flex-1 py-2 rounded-lg font-bold ${activeMenu === 'users' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>👥 Users</Btn>
       </div>
       <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
         {activeMenu === 'gifts' && (
@@ -582,199 +553,12 @@ const AdminDashboard = ({ onClose, onNotice }) => {
             <Btn onClick={handleSaveGifts} disabled={uploadingMedia} className="w-full bg-[var(--color-rose)] py-3 rounded-xl font-bold mt-4 shadow-lg disabled:opacity-50">{uploadingMedia ? 'Uploading Media...' : 'Save All Gifts'}</Btn>
           </div>
         )}
-        {activeMenu === 'titles' && (
-          <TitlesAdminPanel onNotice={onNotice} />
-        )}
         {activeMenu === 'users' && (
           <div className="text-center text-slate-400 mt-10 p-5 bg-[#0c0c10] rounded-xl border border-white/10">
             <p className="text-lg font-bold mb-2 text-white">User Management</p>
-            <p className="text-sm">To manage a specific user, go to their Profile and click the ⋮ (More) button. You can grant titles from the Titles tab by searching user ID.</p>
+            <p className="text-sm">To manage a specific user, go to their Profile and click the ⋮ (More) button.</p>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-const TITLE_DURATIONS = [
-  { id: '24h', label: '24 Hours', ms: 24 * 60 * 60 * 1000 },
-  { id: '3d', label: '3 Days', ms: 3 * 24 * 60 * 60 * 1000 },
-  { id: '7d', label: '7 Days', ms: 7 * 24 * 60 * 60 * 1000 },
-  { id: '30d', label: '30 Days', ms: 30 * 24 * 60 * 60 * 1000 },
-  { id: 'perm', label: 'Permanent', ms: 0 },
-];
-
-const TitlesAdminPanel = ({ onNotice }) => {
-  const [catalog, setCatalog] = useState([]);
-  const [newTitle, setNewTitle] = useState({ text: '', emoji: '👑', glow: true, img: '' });
-  const [grantId, setGrantId] = useState('');
-  const [selectedTitleId, setSelectedTitleId] = useState('');
-  const [durationId, setDurationId] = useState('7d');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const unsub = db.collection('settings').doc('titles').onSnapshot((doc) => {
-      if (doc.exists && Array.isArray(doc.data()?.list)) setCatalog(doc.data().list);
-      else setCatalog([]);
-    });
-    return () => unsub();
-  }, []);
-
-  const saveCatalog = async (list) => {
-    try {
-      await db.collection('settings').doc('titles').set({ list });
-      setCatalog(list);
-      onNotice('Titles catalog saved!');
-    } catch (e) { onNotice(`Save failed: ${errMsg(e)}`); }
-  };
-
-  const addTitle = () => {
-    if (!newTitle.text.trim()) return onNotice('Title text required');
-    const id = `t_${Date.now()}`;
-    const entry = { id, text: newTitle.text.trim(), emoji: newTitle.emoji || '', glow: !!newTitle.glow, img: newTitle.img || '', createdAt: Date.now() };
-    saveCatalog([...catalog, entry]);
-    setNewTitle({ text: '', emoji: '👑', glow: true, img: '' });
-  };
-
-  const removeTitle = (id) => saveCatalog(catalog.filter((t) => t.id !== id));
-
-  const findUserByDisplayId = async (rawId) => {
-    const id = String(rawId || '').trim();
-    if (!id) return null;
-    // Try string match first
-    let snap = await db.collection('users').where('displayId', '==', id).limit(1).get();
-    if (!snap.empty) return snap.docs[0];
-    // Try number match (some older docs store displayId as number)
-    if (/^\d+$/.test(id)) {
-      snap = await db.collection('users').where('displayId', '==', Number(id)).limit(1).get();
-      if (!snap.empty) return snap.docs[0];
-    }
-    return null;
-  };
-
-  const grantTitle = async () => {
-    if (!grantId.trim()) return onNotice('Enter user Display ID');
-    if (!selectedTitleId) return onNotice('Select a title from catalog first');
-    if (!catalog.length) return onNotice('Catalog empty — create a title first');
-    setLoading(true);
-    try {
-      const userDoc = await findUserByDisplayId(grantId);
-      if (!userDoc) { onNotice('User not found with that ID'); setLoading(false); return; }
-      const data = userDoc.data() || {};
-      const tpl = catalog.find((t) => t.id === selectedTitleId);
-      if (!tpl) { onNotice('Title not found in catalog'); setLoading(false); return; }
-      const dur = TITLE_DURATIONS.find((d) => d.id === durationId) || TITLE_DURATIONS[2];
-      const expiresAt = dur.ms === 0 ? null : Date.now() + dur.ms;
-      const existing = Array.isArray(data.titles) ? data.titles : [];
-      const filtered = existing.filter((t) => t.id !== tpl.id);
-      const granted = {
-        id: tpl.id,
-        text: tpl.text,
-        name: tpl.text,
-        emoji: tpl.emoji || '',
-        img: tpl.img || '',
-        glow: !!tpl.glow,
-        equipped: true,
-        expiresAt,
-        grantedAt: Date.now()
-      };
-      await uDoc(userDoc.id).update({ titles: [...filtered, granted] });
-      onNotice(`✅ Title "${tpl.text}" granted to ${data.displayName || grantId} (${dur.label})`);
-      setGrantId('');
-    } catch (e) {
-      onNotice(`Grant failed: ${errMsg(e)}`);
-      console.error('grantTitle error', e);
-    }
-    setLoading(false);
-  };
-
-  const revokeTitle = async () => {
-    if (!grantId.trim()) return onNotice('Enter user Display ID');
-    if (!selectedTitleId) return onNotice('Select a title from catalog first');
-    setLoading(true);
-    try {
-      const userDoc = await findUserByDisplayId(grantId);
-      if (!userDoc) { onNotice('User not found with that ID'); setLoading(false); return; }
-      const data = userDoc.data() || {};
-      const existing = Array.isArray(data.titles) ? data.titles : [];
-      const next = existing.filter((t) => t.id !== selectedTitleId);
-      await uDoc(userDoc.id).update({ titles: next });
-      onNotice('Title revoked from user');
-    } catch (e) {
-      onNotice(`Revoke failed: ${errMsg(e)}`);
-      console.error('revokeTitle error', e);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div className="space-y-5">
-      <div className="bg-[#0c0c10] p-4 rounded-xl border border-white/10 space-y-3">
-        <h3 className="font-bold text-yellow-400">Create Custom Title</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className={C_LBL_XS}>Emoji (front)</label>
-            <input type="text" value={newTitle.emoji} onChange={(e) => setNewTitle({ ...newTitle, emoji: e.target.value })} className={C_INP_SM} placeholder="👑" />
-          </div>
-          <div>
-            <label className={C_LBL_XS}>Glow?</label>
-            <select value={newTitle.glow ? '1' : '0'} onChange={(e) => setNewTitle({ ...newTitle, glow: e.target.value === '1' })} className={C_INP_SM}>
-              <option value="1">Yes (glowing)</option>
-              <option value="0">No</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className={C_LBL_XS}>Title Text</label>
-          <input type="text" value={newTitle.text} onChange={(e) => setNewTitle({ ...newTitle, text: e.target.value })} className={C_INP_SM} placeholder="e.g. Legend of World Star" maxLength={40} />
-        </div>
-        <div>
-          <label className={C_LBL_XS}>Optional Image URL</label>
-          <input type="text" value={newTitle.img} onChange={(e) => setNewTitle({ ...newTitle, img: e.target.value })} className={C_INP_SM} placeholder="https://..." />
-        </div>
-        <Btn onClick={addTitle} className="w-full bg-green-600 py-2.5 rounded-xl font-bold text-sm">+ Add to Catalog</Btn>
-      </div>
-
-      <div className="bg-[#0c0c10] p-4 rounded-xl border border-white/10">
-        <h3 className="font-bold text-white mb-3">Catalog ({catalog.length})</h3>
-        {catalog.length === 0 ? <p className="text-slate-500 text-sm">No custom titles yet.</p> : (
-          <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
-            {catalog.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-2 bg-black/40 rounded-lg">
-                <div className="flex items-center gap-2 min-w-0">
-                  {t.emoji && <span>{t.emoji}</span>}
-                  <span className={`text-sm font-bold truncate ${t.glow ? 'text-yellow-300' : 'text-white'}`}>{t.text}</span>
-                </div>
-                <Btn onClick={() => removeTitle(t.id)} className="text-red-400 text-xs font-bold px-2">Delete</Btn>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-[#0c0c10] p-4 rounded-xl border border-yellow-500/30 space-y-3">
-        <h3 className="font-bold text-yellow-400">Grant / Revoke Title</h3>
-        <div>
-          <label className={C_LBL_XS}>User Display ID (9-digit)</label>
-          <input type="text" value={grantId} onChange={(e) => setGrantId(e.target.value)} className={C_INP_SM} placeholder="461757881" />
-        </div>
-        <div>
-          <label className={C_LBL_XS}>Select Title</label>
-          <select value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)} className={C_INP_SM}>
-            <option value="">— Choose —</option>
-            {catalog.map((t) => <option key={t.id} value={t.id}>{t.emoji} {t.text}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className={C_LBL_XS}>Duration</label>
-          <select value={durationId} onChange={(e) => setDurationId(e.target.value)} className={C_INP_SM}>
-            {TITLE_DURATIONS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <Btn onClick={grantTitle} disabled={loading} className="flex-1 bg-[var(--color-rose)] py-2.5 rounded-xl font-bold text-sm disabled:opacity-50">Grant</Btn>
-          <Btn onClick={revokeTitle} disabled={loading} className="flex-1 bg-red-600/80 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50">Revoke</Btn>
-        </div>
       </div>
     </div>
   );
@@ -1263,7 +1047,7 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
   );
 };
 
-const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, demoMode }) => {
+const ChatRoom = ({ chatData, user, onBack, openProfile, onNotice, demoMode }) => {
   const { chatId, otherUser } = chatData;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
@@ -1272,8 +1056,6 @@ const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const online = isUserOnline(otherUser);
-  const isOfficialSender = userProfile?.displayId === ADMIN_DISPLAY_ID;
-  const isOfficialReceiver = otherUser?.displayId === ADMIN_DISPLAY_ID;
   useEffect(() => {
     if (demoMode) { setMessages([{ id: 'demo-m1', type: 'text', text: 'Hey! Welcome to World Star.', senderId: otherUser.uid }]); return; }
     const unsub = db.collection('chats').doc(chatId).collection('messages').orderBy('createdAt', 'asc').onSnapshot((snap) => {
@@ -1282,7 +1064,7 @@ const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, 
     });
     return () => unsub();
   }, [chatId, demoMode, otherUser.uid]);
-  const isBlocked = !canSendDirectMessage(messages, user.uid, otherUser.uid, { isOfficialSender, isOfficialReceiver });
+  const isBlocked = !canSendDirectMessage(messages, user.uid, otherUser.uid);
   const send = async (e) => {
     e.preventDefault();
     if (!text.trim() || isBlocked || uploading) return;
@@ -1520,77 +1302,6 @@ const RoomInterface = ({
     };
   }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]); // FIX: Removed onLeave from deps
 
-  // Heartbeat + auto-remove offline/stale members from room
-  // Uses transaction so seat changes are never overwritten by a stale heartbeat
-  useEffect(() => {
-    if (demoMode || !roomId || !user?.uid) return;
-    const roomRef = rDoc(roomId);
-    const STALE_MS = 120 * 1000;
-    const BEAT_MS = 30 * 1000;
-    let beatCount = 0;
-
-    const heartbeat = async () => {
-      try {
-        await db.runTransaction(async (tx) => {
-          const doc = await tx.get(roomRef);
-          if (!doc.exists) return;
-          const data = doc.data() || {};
-          let members = data.activeMembers || [];
-          const now = Date.now();
-
-          // Update only MY lastSeen / name / img — keep seatIndex exactly as is
-          const meIdx = members.findIndex((m) => m.uid === user.uid);
-          if (meIdx >= 0) {
-            members = members.map((m, i) =>
-              i === meIdx
-                ? { ...m, lastSeen: now, name: userProfile.displayName || m.name, img: userProfile.photoURL || m.img }
-                : m
-            );
-          } else {
-            // Not in list somehow — rejoin without taking a seat
-            members = [...members, {
-              uid: user.uid,
-              name: userProfile.displayName,
-              img: userProfile.photoURL,
-              seatIndex: null,
-              lastSeen: now
-            }];
-          }
-
-          // Prune only every 2nd beat to reduce write frequency
-          beatCount += 1;
-          let nextMembers = members;
-          let nextOwner = null;
-          let shouldDelete = false;
-          if (beatCount % 2 === 0) {
-            const pruned = pruneStaleMembers(members, data.ownerId, STALE_MS);
-            nextMembers = pruned.nextMembers;
-            nextOwner = pruned.nextOwner || null;
-            shouldDelete = pruned.shouldDeleteRoom || false;
-          }
-
-          if (shouldDelete) {
-            tx.delete(roomRef);
-            return;
-          }
-
-          const updates = { activeMembers: nextMembers };
-          if (nextOwner) {
-            updates.ownerId = nextOwner.uid;
-            updates.ownerName = nextOwner.name;
-            updates.ownerImg = nextOwner.img;
-          }
-          tx.update(roomRef, updates);
-        });
-      } catch (e) { /* ignore transient / contention errors */ }
-    };
-
-    const id = setInterval(heartbeat, BEAT_MS);
-    // First beat after 5s so join + seat take are not raced
-    const first = setTimeout(heartbeat, 5000);
-    return () => { clearInterval(id); clearTimeout(first); };
-  }, [demoMode, roomId, user?.uid, userProfile?.displayName, userProfile?.photoURL]);
-
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages]);
 
   const pushSystemLocal = async (text) => {
@@ -1600,69 +1311,17 @@ const RoomInterface = ({
   const handleSeatClick = async (seatIndex, seatedUser) => {
     if (!roomData) return;
     if (seatedUser) { setSelectedUser(seatedUser); setSheet('profile'); return; }
-    if (myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined) {
-      notify('You are already seated! Lift up from your seat first.');
-      return;
-    }
-    if (demoMode) {
-      const updatedMembers = assignSeatToMember(roomData.activeMembers || [], user.uid, seatIndex);
-      setRoomData({ ...roomData, activeMembers: updatedMembers });
-      return;
-    }
-    try {
-      const roomRef = rDoc(roomId);
-      await db.runTransaction(async (tx) => {
-        const doc = await tx.get(roomRef);
-        if (!doc.exists) return;
-        const data = doc.data() || {};
-        let members = data.activeMembers || [];
-        // Ensure I am in the member list
-        if (!members.some((m) => m.uid === user.uid)) {
-          members = [...members, {
-            uid: user.uid,
-            name: userProfile.displayName,
-            img: userProfile.photoURL,
-            seatIndex: null,
-            lastSeen: Date.now()
-          }];
-        }
-        // Seat already taken?
-        if (members.some((m) => m.seatIndex === seatIndex && m.uid !== user.uid)) {
-          notify('This seat is already taken.');
-          return;
-        }
-        // Already seated?
-        const me = members.find((m) => m.uid === user.uid);
-        if (me && me.seatIndex !== null && me.seatIndex !== undefined) {
-          notify('You are already seated! Lift up first.');
-          return;
-        }
-        const updated = assignSeatToMember(members, user.uid, seatIndex);
-        tx.update(roomRef, { activeMembers: updated });
-      });
-    } catch (e) {
-      notify(`Could not take seat: ${errMsg(e)}`);
-    }
+    if (myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined) { notify('You are already seated! Lift up from your seat first.'); return; }
+    const updatedMembers = assignSeatToMember(roomData.activeMembers || [], user.uid, seatIndex);
+    if (demoMode) { setRoomData({ ...roomData, activeMembers: updatedMembers }); return; }
+    await rDoc(roomId).update({ activeMembers: updatedMembers });
   };
   const liftUpSeat = async (uid) => {
     if (!roomData) return;
+    const updatedMembers = liftMemberFromSeat(roomData.activeMembers || [], uid);
     setSheet(null);
-    if (demoMode) {
-      const updatedMembers = liftMemberFromSeat(roomData.activeMembers || [], uid);
-      setRoomData({ ...roomData, activeMembers: updatedMembers });
-      return;
-    }
-    try {
-      const roomRef = rDoc(roomId);
-      await db.runTransaction(async (tx) => {
-        const doc = await tx.get(roomRef);
-        if (!doc.exists) return;
-        const members = doc.data()?.activeMembers || [];
-        tx.update(roomRef, { activeMembers: liftMemberFromSeat(members, uid) });
-      });
-    } catch (e) {
-      notify(`Could not leave seat: ${errMsg(e)}`);
-    }
+    if (demoMode) { setRoomData({ ...roomData, activeMembers: updatedMembers }); return; }
+    await rDoc(roomId).update({ activeMembers: updatedMembers });
   };
   const kickUser = async (uid) => {
     if (!roomData) return;
@@ -1740,32 +1399,12 @@ const RoomInterface = ({
         await targetRef.collection('receivedGifts').add({ ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: FV.serverTimestamp() });
         await targetRef.update({ charms: FV.increment(charmsEarned), coins: FV.increment(coinsEarned) });
         
-        // Save latest gift to room for global animation (include i/n for render compatibility)
+        // Save latest gift to room for global animation
         await rDoc(roomId).update({
           latestGift: {
-            animId: Date.now(),
-            i: gift.i,
-            n: gift.n,
-            type: gift.type || 'emoji',
-            anim: gift.anim || 'float',
-            sound: gift.sound || '',
-            senderName: userProfile.displayName,
-            giftName: gift.n,
-            giftIcon: gift.i,
-            giftType: gift.type || 'emoji'
+            animId: Date.now(), giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji', anim: gift.anim || 'float', sound: gift.sound || '', senderName: userProfile.displayName
           }
         });
-        // Show animation immediately for the sender
-        setGiftAnim({
-          animId: Date.now(),
-          i: gift.i,
-          n: gift.n,
-          type: gift.type || 'emoji',
-          anim: gift.anim || 'float',
-          sound: gift.sound || ''
-        });
-        playGiftSound(gift.sound);
-        setTimeout(() => setGiftAnim(null), 3500);
       }
       await pushSystemLocal(`${userProfile.displayName} sent ${gift.n} to ${isSelfGift ? 'themselves' : target.name}. Receiver got ${charmsEarned} Charms and ${coinsEarned} Coins!`);
       setSheet(null); 
@@ -2035,9 +1674,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
   const gender = userProfile?.gender || 'Male';
   const country = userProfile?.country || COUNTRIES[0];
   const priceTag = userProfile?.priceTag || PRICE_TAGS[0];
-  const userTitles = Array.isArray(userProfile?.titles) ? userProfile.titles.filter(t => !t.expiresAt || t.expiresAt > Date.now()) : [];
-  const equippedTitles = userTitles.filter(t => t.equipped !== false);
-  const titleBadge = equippedTitles[0] || { id: 'none', name: 'None', text: 'None' };
+  const titleBadge = userProfile?.title || TITLES[0];
   const isVisitorUnlocked = isVisitorPassActive(userProfile?.visitorExpiry);
   const showComingSoon = (label) => onNotice(`🚧 ${label} Coming Soon!`);
 
@@ -2203,7 +1840,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             </div>
             <div className={C_CARD_ME}>
               <Row icon="🏷️" label="Price Tag" value={priceTag.id === 'none' ? 'None' : `${priceTag.icon} ${priceTag.name} (${priceTag.price} Coins)`} onClick={() => setActiveSheet('price')} />
-              <Row icon="👑" label="Title" value={equippedTitles.length ? equippedTitles.map(t => (t.emoji || '') + (t.text || t.name)).join(' · ') : 'None'} onClick={() => setActiveSheet('title')} />
+              <Row icon="👑" label="Title" value={titleBadge.name} onClick={() => setActiveSheet('title')} />
               <Row icon="🎖️" label="Badge" value="Coming Soon" onClick={() => showComingSoon('Badges')} />
               <Row icon="⭐" label="Level" value={`Lv.${userProfile.level || 1}`} onClick={() => onNotice('Level is based on activity.')} />
             </div>
@@ -2305,34 +1942,13 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
       )}
       {activeSheet === 'title' && (
         <SheetModal zClass="z-[400]" onClose={() => setActiveSheet(null)}>
-          <h2 className="text-lg font-bold mb-2 text-white">Your Titles</h2>
-          <p className="text-xs text-slate-400 mb-4">Titles are granted by Official. Equip multiple — they appear under your ID.</p>
-          {userTitles.length === 0 ? (
-            <p className="text-center text-slate-500 py-6 text-sm">No titles yet. Official can grant you custom titles.</p>
-          ) : (
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto no-scrollbar">
-              {userTitles.map((t, idx) => (
-                <div key={t.id || idx} className="flex items-center justify-between p-3 bg-[#0b1120] rounded-xl border border-gray-800">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {t.emoji && <span className="text-xl">{t.emoji}</span>}
-                    {t.img && <img src={t.img} alt="" className="w-6 h-6 rounded object-cover" />}
-                    <div className="min-w-0">
-                      <p className={`font-bold text-sm truncate ${t.glow ? 'text-yellow-300' : 'text-white'}`} style={t.glow ? { textShadow: '0 0 8px rgba(245,197,66,0.8)' } : {}}>{t.text || t.name}</p>
-                      {t.expiresAt && <p className="text-[10px] text-slate-500">Expires {new Date(t.expiresAt).toLocaleDateString()}</p>}
-                    </div>
-                  </div>
-                  <Btn onClick={async () => {
-                    const wasEquipped = t.equipped !== false;
-                    const next = userTitles.map((x, i) => i === idx ? { ...x, equipped: !wasEquipped } : x);
-                    await persistProfilePatch({ titles: next }, wasEquipped ? 'Title unequipped' : 'Title equipped!');
-                  }} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${t.equipped !== false ? 'bg-[var(--color-rose)] text-white' : 'bg-slate-700 text-slate-300'}`}>
-                    {t.equipped !== false ? 'Equipped' : 'Equip'}
-                  </Btn>
-                </div>
-              ))}
-            </div>
-          )}
-          <Btn onClick={() => setActiveSheet(null)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-4 min-h-[44px]">Close</Btn>
+          <h2 className="text-lg font-bold mb-4 text-white">Select Title</h2>
+          {TITLES.map((t) => (
+            <Btn key={t.id} onClick={() => { persistProfilePatch({ title: t }, 'Title updated!'); setActiveSheet(null); }} className="w-full text-left p-4 border-b border-gray-800 text-white text-lg font-semibold hover:bg-white/5 flex items-center justify-between min-h-[56px]">
+              <span>{t.name}</span>{titleBadge.id === t.id && <span className="text-pink-400 text-sm font-bold">✓</span>}
+            </Btn>
+          ))}
+          <Btn onClick={() => setActiveSheet(null)} className="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl mt-4 min-h-[44px]">Cancel</Btn>
         </SheetModal>
       )}
       {activeSheet === 'birthday' && (
@@ -2502,23 +2118,10 @@ const UserProfileView = ({
             {!isTargetAdmin && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 tabular-nums"><CharmIcon charms={displayTotalCharms} size="text-sm" /> {displayTotalCharms}</span>}
             <span className="ml-auto text-sm font-semibold text-slate-600">{targetCountry.flag} {targetCountry.name}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600 mb-2 bg-[#f8f9fa] border border-slate-200 w-fit px-3 py-1 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-slate-600 mb-4 bg-[#f8f9fa] border border-slate-200 w-fit px-3 py-1 rounded-lg">
             <span className="font-semibold tabular-nums">ID: {user.displayId}</span>
             <Btn onClick={() => { navigator.clipboard?.writeText(user.displayId); onNotice('ID Copied!'); }} className="cursor-pointer hover:text-[#1a1a2e] font-bold" aria-label="Copy ID">📋</Btn>
           </div>
-          {(() => {
-            const titles = (Array.isArray(user.titles) ? user.titles : []).filter((t) => t.equipped !== false && (!t.expiresAt || t.expiresAt > Date.now()));
-            if (!titles.length) return null;
-            return (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {titles.map((t, i) => (
-                  <span key={t.id || i} className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${t.glow ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`} style={t.glow ? { textShadow: '0 0 6px rgba(245,197,66,0.5)' } : {}}>
-                    {t.emoji || ''}{t.img ? <img src={t.img} alt="" className="w-3.5 h-3.5 rounded object-cover" /> : null} {t.text || t.name}
-                  </span>
-                ))}
-              </div>
-            );
-          })()}
           <div className="mb-4 bg-[#f8f9fa] border border-slate-200 rounded-2xl p-4">
             <h3 className="font-bold text-sm text-[#1a1a2e] mb-1">Bio</h3>
             <p className="text-slate-600 text-sm leading-relaxed">{user.bio || 'This user is mysterious.'}</p>
@@ -2803,7 +2406,7 @@ function WorldStarApp() {
               level: 1, charms: 0, coins: 0, friends: [], requests: [], sentRequests: [],
               isBanned: false, banExpiresAt: null, isAdmin: false, adminPermissions: [], gender: 'Male', birthday: null,
               country: { code: 'IN', name: 'India', flag: '🇮🇳' }, priceTag: { id: 'none', name: 'None', icon: '🚫' },
-              title: { id: 'none', name: 'None' }, titles: [], visitorExpiry: null, isOnline: true, lastSeen: now,
+              title: { id: 'none', name: 'None' }, visitorExpiry: null, isOnline: true, lastSeen: now,
             };
             await docRef.set({ ...newData, createdAt: FV.serverTimestamp() });
             setUserProfile(newData);
@@ -2812,24 +2415,8 @@ function WorldStarApp() {
             const patch = { isOnline: true, lastSeen: now };
             if (data.isBanned && data.banExpiresAt && now > data.banExpiresAt) { patch.isBanned = false; patch.banExpiresAt = null; data.isBanned = false; data.banExpiresAt = null; }
             await docRef.update(patch).catch(() => {});
-            setUserProfile({ ...data, isOnline: true, lastSeen: now, coins: Number(data.coins) || 0, charms: Number(data.charms) || 0, titles: data.titles || [] });
+            setUserProfile({ ...data, isOnline: true, lastSeen: now, coins: Number(data.coins) || 0, charms: Number(data.charms) || 0 });
           }
-          // Auto-add Official World Star account as friend for every user
-          try {
-            const officialSnap = await db.collection('users').where('displayId', '==', ADMIN_DISPLAY_ID).limit(1).get();
-            if (!officialSnap.empty) {
-              const officialUid = officialSnap.docs[0].id;
-              if (officialUid !== u.uid) {
-                const myFriends = (await docRef.get()).data()?.friends || [];
-                if (!myFriends.includes(officialUid)) {
-                  await docRef.update({ friends: FV.arrayUnion(officialUid) });
-                  setUserProfile((prev) => prev ? { ...prev, friends: [...(prev.friends || []), officialUid] } : prev);
-                }
-                // Also add this user to official's friends (optional, for mutual)
-                await uDoc(officialUid).update({ friends: FV.arrayUnion(u.uid) }).catch(() => {});
-              }
-            }
-          } catch (e) { console.warn('Official friend auto-add failed', e); }
           setView('app');
         } else { setUser(null); setUserProfile(null); setView('login'); }
       } catch (error) { console.error(error); }
@@ -2923,7 +2510,7 @@ function WorldStarApp() {
           {userProfile?.displayId === ADMIN_DISPLAY_ID && !showAdminDashboard && <DraggableAdminBtn onClick={() => setShowAdminDashboard(true)} />}
         </div>
       )}
-      {currentChat && user && <ChatRoom chatData={currentChat} user={user} userProfile={userProfile} onBack={() => setCurrentChat(null)} openProfile={(p) => setViewingProfile(p)} onNotice={showNotice} demoMode={isAutostartDemo} />}
+      {currentChat && user && <ChatRoom chatData={currentChat} user={user} onBack={() => setCurrentChat(null)} openProfile={(p) => setViewingProfile(p)} onNotice={showNotice} demoMode={isAutostartDemo} />}
       {viewingProfile && user && userProfile && (
         <div className="fixed inset-0 z-[3000] bg-[#ffffff]">
           <UserProfileView
