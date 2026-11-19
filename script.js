@@ -21,7 +21,7 @@ const rDoc = (id) => col('voiceRooms').doc(id);
 const errMsg = (e, fb = 'Unknown error') => (e instanceof Error ? e.message : fb);
 
 const ADMIN_DISPLAY_ID = '461757881';
-const OFFICIAL_DISPLAY_IDS = [ADMIN_DISPLAY_ID]; // add more official IDs here if needed
+const OFFICIAL_DISPLAY_IDS = [ADMIN_DISPLAY_ID];
 const isOfficialDisplayId = (id) => OFFICIAL_DISPLAY_IDS.includes(id);
 
 const SEAT_SLOTS = [
@@ -107,9 +107,7 @@ function getTitleStyleById(id) {
 function getActiveTitles(titles, now = Date.now()) {
   return (titles || []).filter((t) => t.active !== false && (!t.expiresAt || t.expiresAt > now));
 }
-function isTitleExpired(t, now = Date.now()) {
-  return Boolean(t.expiresAt && t.expiresAt <= now);
-}
+function isTitleExpired(t, now = Date.now()) { return Boolean(t.expiresAt && t.expiresAt <= now); }
 
 // ============ HELPERS ============
 function getGenderEmoji(gender) { if (gender === 'Female') return '♀️'; if (gender === 'Other') return '⚧️'; return '♂️'; }
@@ -338,7 +336,7 @@ const TitleBadge = ({ title, size = 'sm' }) => {
   const szCls = size === 'sm' ? 'text-[10px]' : 'text-xs';
   const imgSz = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
   return (
-    <span className={`inline-flex items-center gap-0.5 font-extrabold ${szCls} px-1.5 py-0.5 rounded-md bg-black/40 border border-white/10`} style={style}>
+    <span className={`title-badge inline-flex items-center gap-0.5 font-extrabold ${szCls} px-1.5 py-0.5 rounded-md bg-black/40 border border-white/10`} style={style}>
       {isImg ? <img src={title.emoji} alt="" className={`inline-block ${imgSz} object-contain`} /> : title.emoji ? <span>{title.emoji}</span> : null}
       <span>{title.text}</span>
     </span>
@@ -476,14 +474,11 @@ const TitleManagerAdmin = ({ onNotice }) => {
   const [loadedTitles, setLoadedTitles] = useState([]);
 
   useEffect(() => {
-    const unsub = db.collection('settings').doc('titleTemplates').onSnapshot((doc) => {
-      setTemplates(doc.exists ? (doc.data().list || []) : []);
-    });
+    const unsub = db.collection('settings').doc('titleTemplates').onSnapshot((doc) => { setTemplates(doc.exists ? (doc.data().list || []) : []); });
     return () => unsub();
   }, []);
 
   const saveTemplates = async (list) => { await db.collection('settings').doc('titleTemplates').set({ list }); };
-
   const createTemplate = async () => {
     if (!newTitle.text.trim()) return onNotice('Enter title text');
     const tpl = { id: `t-${Date.now()}`, text: newTitle.text.trim().slice(0, 20), emoji: newTitle.emoji.trim(), glowStyle: newTitle.glowStyle || 'gold', createdAt: Date.now() };
@@ -491,9 +486,7 @@ const TitleManagerAdmin = ({ onNotice }) => {
     setNewTitle({ text: '', emoji: '', glowStyle: 'gold' });
     onNotice('Title template created!');
   };
-
   const deleteTemplate = async (id) => { await saveTemplates(templates.filter((t) => t.id !== id)); onNotice('Template deleted'); };
-
   const loadUser = async () => {
     if (!targetDisplayId.trim()) return onNotice('Enter user display ID');
     setBusy(true);
@@ -506,7 +499,6 @@ const TitleManagerAdmin = ({ onNotice }) => {
     } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
     setBusy(false);
   };
-
   const giveTitle = async () => {
     if (!loadedUser) return onNotice('Load a user first');
     if (!selectedTemplateId) return onNotice('Select a template');
@@ -525,31 +517,20 @@ const TitleManagerAdmin = ({ onNotice }) => {
     } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
     setBusy(false);
   };
-
   const revokeSingle = async (titleId) => {
     if (!loadedUser) return;
-    try {
-      const updated = (loadedTitles || []).filter((t) => t.id !== titleId);
-      await uDoc(loadedUser.uid).update({ titles: updated });
-      setLoadedTitles(updated);
-      onNotice('Title revoked');
-    } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+    try { const updated = (loadedTitles || []).filter((t) => t.id !== titleId); await uDoc(loadedUser.uid).update({ titles: updated }); setLoadedTitles(updated); onNotice('Title revoked'); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
-
   const revokeAll = async () => {
     if (!loadedUser) return;
     try { await uDoc(loadedUser.uid).update({ titles: [] }); setLoadedTitles([]); onNotice('All titles revoked'); }
     catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
-
   const toggleAdminBadge = async () => {
     if (!loadedUser) return onNotice('Load a user first');
-    try {
-      const next = loadedUser.showAdminBadge === false ? true : false;
-      await uDoc(loadedUser.uid).update({ showAdminBadge: next });
-      setLoadedUser({ ...loadedUser, showAdminBadge: next });
-      onNotice(next ? 'Admin badge shown' : 'Admin badge hidden');
-    } catch (e) { onNotice(`Error: ${errMsg(e)}`); }
+    try { const next = loadedUser.showAdminBadge === false ? true : false; await uDoc(loadedUser.uid).update({ showAdminBadge: next }); setLoadedUser({ ...loadedUser, showAdminBadge: next }); onNotice(next ? 'Admin badge shown' : 'Admin badge hidden'); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
 
   return (
@@ -609,10 +590,7 @@ const TitleManagerAdmin = ({ onNotice }) => {
               <p className="text-[11px] text-slate-400 mb-1">Current Titles ({loadedTitles.length})</p>
               {loadedTitles.length === 0 ? <p className="text-[11px] text-gray-500">None</p> : loadedTitles.map((t) => (
                 <div key={t.id} className="flex items-center justify-between p-1.5 bg-black/30 rounded mb-1">
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <TitleBadge title={t} />
-                    {t.expiresAt && <span className="text-[9px] text-gray-500">{new Date(t.expiresAt).toLocaleDateString()}</span>}
-                  </div>
+                  <div className="flex items-center gap-1 flex-wrap"><TitleBadge title={t} />{t.expiresAt && <span className="text-[9px] text-gray-500">{new Date(t.expiresAt).toLocaleDateString()}</span>}</div>
                   <Btn onClick={() => revokeSingle(t.id)} className="text-red-400 text-[10px] px-1.5 py-0.5">Revoke</Btn>
                 </div>
               ))}
@@ -638,8 +616,8 @@ const AdminDashboard = ({ onClose, onNotice }) => {
     return () => unsub();
   }, []);
   const handleSaveGifts = async () => {
-    try { await db.collection('settings').doc('gifts').set({ list: currentGifts }); onNotice('Gifts updated successfully!'); }
-    catch (e) { onNotice(`Error saving gifts: ${errMsg(e)}`); }
+    try { await db.collection('settings').doc('gifts').set({ list: currentGifts }); onNotice('Gifts updated!'); }
+    catch (e) { onNotice(`Error: ${errMsg(e)}`); }
   };
   const handleFileUpload = async (e, idx, fileType) => {
     const file = e.target.files?.[0];
@@ -654,15 +632,15 @@ const AdminDashboard = ({ onClose, onNotice }) => {
       n[idx] = { ...n[idx], [fileType]: downloadURL };
       if (fileType === 'i') n[idx].type = file.type.startsWith('video') ? 'video' : 'image';
       setCurrentGifts(n);
-      onNotice('File uploaded successfully!');
+      onNotice('File uploaded!');
     } catch (err) { onNotice(`Upload failed: ${errMsg(err)}`); }
     setUploadingMedia(false);
   };
   return (
-    <div className="fixed inset-0 bg-[#000000] z-[5000] flex flex-col text-white">
+    <div className="fixed inset-0 bg-black z-[5000] flex flex-col text-white">
       <div className="flex justify-between items-center p-4 border-b border-white/10 shrink-0">
         <h1 className="text-xl font-bold text-yellow-500">👑 Super Admin Dashboard</h1>
-        <Btn onClick={onClose} aria-label="Close admin dashboard" className="text-2xl font-bold text-slate-400 hover:text-white">×</Btn>
+        <Btn onClick={onClose} className="text-2xl font-bold text-slate-400 hover:text-white">×</Btn>
       </div>
       <div className="flex gap-2 p-4 border-b border-white/10 shrink-0">
         <Btn onClick={() => setActiveMenu('gifts')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${activeMenu === 'gifts' ? 'bg-[var(--color-rose)]' : 'bg-[#0c0c10]'}`}>🎁 Gifts</Btn>
@@ -678,22 +656,11 @@ const AdminDashboard = ({ onClose, onNotice }) => {
             </div>
             {currentGifts.map((g, idx) => (
               <div key={idx} className="bg-[#0c0c10] p-3 rounded-xl border border-white/10 space-y-3 relative">
-                <Btn aria-label="Remove gift" onClick={() => setCurrentGifts(currentGifts.filter((_, i) => i !== idx))} className="absolute top-2 right-2 text-red-500 font-bold text-lg z-10">×</Btn>
+                <Btn onClick={() => setCurrentGifts(currentGifts.filter((_, i) => i !== idx))} className="absolute top-2 right-2 text-red-500 font-bold text-lg z-10">×</Btn>
                 <div className="flex gap-2 pr-6">
-                  <div className="w-20">
-                    <label className={C_LBL_XS}>Preview</label>
-                    <div className="w-full h-12 bg-black border border-white/15 rounded flex items-center justify-center text-2xl relative overflow-hidden">
-                      {g.type === 'image' ? <img src={g.i} alt={g.n} className="w-full h-full object-contain" /> : g.type === 'video' ? <video src={g.i} className="w-full h-full object-contain" /> : g.i}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <label className={C_LBL_XS}>Name</label>
-                    <input type="text" value={g.n} onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], n: e.target.value }; setCurrentGifts(n); }} className={C_INP_SM} />
-                  </div>
-                  <div className="w-16">
-                    <label className={C_LBL_XS}>Price</label>
-                    <input type="number" value={g.p} onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], p: Number(e.target.value) }; setCurrentGifts(n); }} className={C_INP_SM} />
-                  </div>
+                  <div className="w-20"><label className={C_LBL_XS}>Preview</label><div className="w-full h-12 bg-black border border-white/15 rounded flex items-center justify-center text-2xl relative overflow-hidden">{g.type === 'image' ? <img src={g.i} alt={g.n} className="w-full h-full object-contain" /> : g.type === 'video' ? <video src={g.i} className="w-full h-full object-contain" /> : g.i}</div></div>
+                  <div className="flex-1"><label className={C_LBL_XS}>Name</label><input type="text" value={g.n} onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], n: e.target.value }; setCurrentGifts(n); }} className={C_INP_SM} /></div>
+                  <div className="w-16"><label className={C_LBL_XS}>Price</label><input type="number" value={g.p} onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], p: Number(e.target.value) }; setCurrentGifts(n); }} className={C_INP_SM} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div><label className={C_LBL_XS}>Change Emoji</label><input type="text" value={g.type === 'emoji' ? g.i : ''} placeholder="e.g. 🌹" onChange={(e) => { const n = [...currentGifts]; n[idx] = { ...n[idx], i: e.target.value, type: 'emoji' }; setCurrentGifts(n); }} className={C_INP_SM} /></div>
@@ -731,9 +698,7 @@ const HomeTab = ({ userProfile, setActiveTab, openProfile, onNotice }) => {
           <div><p className="text-[11px] text-slate-400 font-semibold">Welcome back,</p><h2 className="font-bold text-lg text-white leading-tight">{userProfile?.displayName}</h2></div>
         </Btn>
         <Btn onClick={comingSoon} className="bg-[#0c0c10] border border-yellow-500/50 rounded-full px-3 py-1.5 flex items-center gap-1.5">
-          <span className="text-yellow-500 text-base">🪙</span>
-          <span className="font-bold text-sm text-white tabular-nums">{isAdmin ? '∞' : userProfile?.coins || 0}</span>
-          <span className="text-yellow-500 font-bold">+</span>
+          <span className="text-yellow-500 text-base">🪙</span><span className="font-bold text-sm text-white tabular-nums">{isAdmin ? '∞' : userProfile?.coins || 0}</span><span className="text-yellow-500 font-bold">+</span>
         </Btn>
       </div>
       <div className="px-4 mb-6">
@@ -823,9 +788,7 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
   const [passwordPromptRoom, setPasswordPromptRoom] = useState(null);
   const [enteredPass, setEnteredPass] = useState('');
   useEffect(() => {
-    const unsub = db.collection('voiceRooms').orderBy('createdAt', 'desc').onSnapshot((snap) => {
-      setRooms(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = db.collection('voiceRooms').orderBy('createdAt', 'desc').onSnapshot((snap) => { setRooms(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); });
     return () => unsub();
   }, []);
   const filteredRooms = rooms.filter((r) => (currentCat === 'All' ? true : r.tag === currentCat));
@@ -839,9 +802,7 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
     <div className="pb-4">
       <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex gap-5 items-baseline">
-          {['Related', 'All', 'Popular'].map((tab) => (
-            <Btn key={tab} onClick={() => setCurrentTab(tab)} className={`cursor-pointer transition-all ${currentTab === tab ? 'text-2xl font-extrabold text-white' : 'text-sm text-slate-400 font-semibold'}`}>{tab}</Btn>
-          ))}
+          {['Related', 'All', 'Popular'].map((tab) => (<Btn key={tab} onClick={() => setCurrentTab(tab)} className={`cursor-pointer transition-all ${currentTab === tab ? 'text-2xl font-extrabold text-white' : 'text-sm text-slate-400 font-semibold'}`}>{tab}</Btn>))}
         </div>
         <div className="flex gap-3 items-center">
           <Btn onClick={() => onNotice('Room search coming soon.')} className="text-xl text-slate-300 w-10 h-10 flex items-center justify-center">🔍</Btn>
@@ -849,16 +810,10 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
         </div>
       </div>
       <Btn onClick={() => onNotice('Hot Room coming soon.')} className="w-[calc(100%-2.5rem)] text-left mx-5 mb-5 bg-gradient-to-br from-purple-600 to-pink-500 rounded-2xl p-5 relative overflow-hidden shadow-lg shadow-purple-500/20 block">
-        <h2 className="text-yellow-300 text-3xl font-black italic mb-2 drop-shadow-md">HOT ROOM</h2>
-        <p className="text-white text-xs bg-white/20 inline-block px-3 py-1 rounded-full">View ranking ▶</p>
+        <h2 className="text-yellow-300 text-3xl font-black italic mb-2 drop-shadow-md">HOT ROOM</h2><p className="text-white text-xs bg-white/20 inline-block px-3 py-1 rounded-full">View ranking ▶</p>
       </Btn>
       <div className="flex gap-5 px-5 pb-3 overflow-x-auto no-scrollbar border-b border-slate-800">
-        {['All', 'Friends', 'PK', 'Music', 'Video', 'Game'].map((cat) => (
-          <Btn key={cat} onClick={() => setCurrentCat(cat)} className="relative pb-2 whitespace-nowrap">
-            <span className={`text-sm font-semibold ${currentCat === cat ? 'text-white' : 'text-slate-400'}`}>{cat}</span>
-            {currentCat === cat && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-1 bg-blue-500 rounded-full" />}
-          </Btn>
-        ))}
+        {['All', 'Friends', 'PK', 'Music', 'Video', 'Game'].map((cat) => (<Btn key={cat} onClick={() => setCurrentCat(cat)} className="relative pb-2 whitespace-nowrap"><span className={`text-sm font-semibold ${currentCat === cat ? 'text-white' : 'text-slate-400'}`}>{cat}</span>{currentCat === cat && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-1 bg-blue-500 rounded-full" />}</Btn>))}
       </div>
       <div className="flex flex-col">
         {filteredRooms.length === 0 ? (
@@ -871,18 +826,8 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
           if (room.tag === 'Chats') tagClass = 'text-green-500 bg-green-500/10';
           return (
             <Btn key={room.id} onClick={() => handleJoinClick(room)} className="w-full text-left flex items-center px-5 py-4 border-b border-slate-800 hover:bg-slate-800/50">
-              <div className="relative mr-4 shrink-0">
-                <UserAvatar src={room.ownerImg} name={room.ownerName} className="w-14 h-14 rounded-2xl shadow-md" />
-                {room.hasPassword && <span className="absolute -top-2 -right-2 text-sm bg-black/80 rounded-full p-1 border border-slate-600">🔒</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-white mb-1 truncate">{room.title}</div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{room.tag}</span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1 tabular-nums">👥 {room.activeMembers?.length || 1}</span>
-                </div>
-                <div className="text-xs text-slate-500 mt-1 truncate">Host: {room.ownerName}</div>
-              </div>
+              <div className="relative mr-4 shrink-0"><UserAvatar src={room.ownerImg} name={room.ownerName} className="w-14 h-14 rounded-2xl shadow-md" />{room.hasPassword && <span className="absolute -top-2 -right-2 text-sm bg-black/80 rounded-full p-1 border border-slate-600">🔒</span>}</div>
+              <div className="flex-1 min-w-0"><div className="text-base font-semibold text-white mb-1 truncate">{room.title}</div><div className="flex items-center gap-2"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{room.tag}</span><span className="text-xs text-slate-400 flex items-center gap-1 tabular-nums">👥 {room.activeMembers?.length || 1}</span></div><div className="text-xs text-slate-500 mt-1 truncate">Host: {room.ownerName}</div></div>
             </Btn>
           );
         })}
@@ -893,10 +838,7 @@ const VoiceRoomTab = ({ user, userProfile, onJoinRoom, onNotice }) => {
             <h3 className="text-base font-bold text-white mb-2">Enter Room Password</h3>
             <p className="text-xs text-slate-400 mb-3 truncate">{passwordPromptRoom.title}</p>
             <input type="password" placeholder="Password" value={enteredPass} onChange={(e) => setEnteredPass(e.target.value)} className="w-full bg-black border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm mb-3 outline-none" />
-            <div className="flex gap-2">
-              <Btn onClick={() => setPasswordPromptRoom(null)} className={C_BTN_S}>Cancel</Btn>
-              <Btn onClick={() => { if (enteredPass !== passwordPromptRoom.password) { onNotice('Incorrect Password!'); return; } const id = passwordPromptRoom.id; setPasswordPromptRoom(null); onJoinRoom(id); }} className="flex-1 bg-blue-600 text-white py-2 rounded-xl font-bold text-sm">Join</Btn>
-            </div>
+            <div className="flex gap-2"><Btn onClick={() => setPasswordPromptRoom(null)} className={C_BTN_S}>Cancel</Btn><Btn onClick={() => { if (enteredPass !== passwordPromptRoom.password) { onNotice('Incorrect Password!'); return; } const id = passwordPromptRoom.id; setPasswordPromptRoom(null); onJoinRoom(id); }} className="flex-1 bg-blue-600 text-white py-2 rounded-xl font-bold text-sm">Join</Btn></div>
           </div>
         </div>
       )}
@@ -936,17 +878,10 @@ const CreateRoomForm = ({ user, userProfile, onClose, onAdvanced, onJoin, onNoti
         {hasPassword && <input type="text" placeholder="Enter Room Password" maxLength={15} className="w-full bg-[#0c0c10] border border-blue-500 rounded-xl p-3 text-white outline-none mb-6" value={password} onChange={(e) => setPassword(e.target.value)} />}
         <div className="text-sm text-slate-400 mb-3 mt-4">Room mode</div>
         <div className="grid grid-cols-3 gap-3 mb-8">
-          {modes.map((mode) => (
-            <Btn key={mode.name} onClick={() => setSelectedMode(mode.name)} className={`relative border rounded-xl p-3 text-center ${selectedMode === mode.name ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400'}`}>
-              {mode.soon && <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">NEW</span>}
-              <div className="text-lg mb-1">{mode.icon}</div><div className="text-xs font-semibold">{mode.name}</div>
-            </Btn>
-          ))}
+          {modes.map((mode) => (<Btn key={mode.name} onClick={() => setSelectedMode(mode.name)} className={`relative border rounded-xl p-3 text-center ${selectedMode === mode.name ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400'}`}>{mode.soon && <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">NEW</span>}<div className="text-lg mb-1">{mode.icon}</div><div className="text-xs font-semibold">{mode.name}</div></Btn>))}
         </div>
         <div className="text-sm text-slate-400 mb-3">Select Room Tag</div>
-        <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-8">
-          {tags.map((tag) => (<Btn key={tag} onClick={() => setSelectedTag(tag)} className={`px-5 py-2 rounded-full text-sm whitespace-nowrap border ${selectedTag === tag ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400'}`}>{tag}</Btn>))}
-        </div>
+        <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-8">{tags.map((tag) => (<Btn key={tag} onClick={() => setSelectedTag(tag)} className={`px-5 py-2 rounded-full text-sm whitespace-nowrap border ${selectedTag === tag ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-slate-700 text-slate-400'}`}>{tag}</Btn>))}</div>
         <Btn onClick={onAdvanced} className="w-full text-center text-yellow-500 font-semibold py-2 mb-8">Create Advanced Voice Room &gt;</Btn>
       </div>
       <div className={C_FORM_FTR}><Btn onClick={handleCreate} disabled={loading} className="w-full bg-blue-600 text-white font-bold text-lg py-3.5 rounded-full shadow-lg">{loading ? 'Creating...' : 'Create Room'}</Btn></div>
@@ -1024,7 +959,7 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
     setAcceptedIds((prev) => (prev.includes(requesterId) ? prev : [...prev, requesterId]));
     setRequests((prev) => prev.filter((r) => r.uid !== requesterId));
     setFriends((prev) => (prev.some((f) => f.uid === requesterId) ? prev : [reqUser, ...prev]));
-    onNotice?.(`Accepted ${reqUser.displayName}'s friend request!`);
+    onNotice?.(`Accepted ${reqUser.displayName}'s request!`);
     if (demoMode) { onDemoAcceptRequest?.(requesterId); return; }
     try {
       await Promise.all([uDoc(user.uid).update({ friends: FV.arrayUnion(requesterId), requests: FV.arrayRemove(requesterId) }), uDoc(requesterId).update({ friends: FV.arrayUnion(user.uid), sentRequests: FV.arrayRemove(user.uid) })]);
@@ -1040,8 +975,7 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
     setSearchError('');
     if (demoMode) {
       const match = [...(demoFriends || []), ...(demoRequests || [])].find((u) => u.displayId === searchId.trim());
-      if (match) { setShowSearch(false); setSearchId(''); openProfile(match); }
-      else setSearchError('User not found!');
+      if (match) { setShowSearch(false); setSearchId(''); openProfile(match); } else setSearchError('User not found!');
       return;
     }
     try {
@@ -1096,11 +1030,7 @@ const ChatsTab = ({ user, userProfile, openProfile, setCurrentChat, onNotice, de
                   <Btn onClick={() => openProfile(u)} className="relative shrink-0"><AvatarDot src={u.photoURL} name={u.displayName} online={online} cls="w-12 h-12 rounded-full" dotCls="w-3.5 h-3.5" /></Btn>
                   <Btn onClick={() => openChat(u)} className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-white flex items-center gap-1.5 truncate">
-                        <span className="truncate">{u.displayName}</span>
-                        {isOfficialDisplayId(u.displayId) && <span className="star-official-badge text-[8px] px-1.5 py-0.5 rounded shrink-0">⭐ Star</span>}
-                        {u.isAdmin && !isOfficialDisplayId(u.displayId) && u.showAdminBadge !== false && <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[8px] px-1.5 py-0.5 rounded shrink-0">Admin</span>}
-                      </p>
+                      <p className="font-bold text-white flex items-center gap-1.5 truncate"><span className="truncate">{u.displayName}</span>{isOfficialDisplayId(u.displayId) && <span className="star-official-badge text-[8px] px-1.5 py-0.5 rounded shrink-0">⭐ Star</span>}{u.isAdmin && !isOfficialDisplayId(u.displayId) && u.showAdminBadge !== false && <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[8px] px-1.5 py-0.5 rounded shrink-0">Admin</span>}</p>
                       <OnlineBadge online={online} />
                     </div>
                     {activeTitles.length > 0 && <div className="flex flex-wrap gap-1 mt-0.5">{activeTitles.slice(0, 2).map((t) => <TitleBadge key={t.id} title={t} />)}</div>}
@@ -1140,7 +1070,8 @@ const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, 
     if (!text.trim() || isBlocked || uploading) return;
     const t = text; setText('');
     if (demoMode) { setMessages((prev) => [...prev, { id: `dm-${Date.now()}`, text: t, type: 'text', senderId: user.uid }]); return; }
-    await db.collection('chats').doc(chatId).collection('messages').add({ text: t, type: 'text', senderId: user.uid, createdAt: FV.serverTimestamp() });
+    try { await db.collection('chats').doc(chatId).collection('messages').add({ text: t, type: 'text', senderId: user.uid, createdAt: FV.serverTimestamp() }); }
+    catch (err) { onNotice(`Send failed: ${errMsg(err)}`); setText(t); }
   };
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
@@ -1160,18 +1091,12 @@ const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, 
     catch { onNotice('Failed to recall.'); }
   };
   return (
-    <div className="fixed inset-0 z-[2000] flex flex-col bg-[#000000] text-white max-w-[430px] mx-auto">
+    <div className="fixed inset-0 z-[2000] flex flex-col bg-black text-white max-w-[430px] mx-auto">
       <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-[#0c0c10] shrink-0 shadow-md">
         <Btn onClick={onBack} className="text-white text-2xl font-bold px-2">←</Btn>
         <Btn className="flex items-center gap-2.5 text-left" onClick={() => openProfile(otherUser)}>
           <AvatarDot src={otherUser?.photoURL} name={otherUser?.displayName} online={online} cls="w-10 h-10 rounded-full border border-slate-600" />
-          <div>
-            <p className="font-bold text-white text-base leading-tight flex items-center gap-2">
-              {otherUser?.displayName}
-              {!isOfficialDisplayId(otherUser?.displayId) && <CharmIcon charms={otherUser?.charms || 0} size="text-sm" />}
-            </p>
-            <OnlineBadge online={online} />
-          </div>
+          <div><p className="font-bold text-white text-base leading-tight flex items-center gap-2">{otherUser?.displayName}{!isOfficialDisplayId(otherUser?.displayId) && <CharmIcon charms={otherUser?.charms || 0} size="text-sm" />}</p><OnlineBadge online={online} /></div>
         </Btn>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-20">
@@ -1188,7 +1113,7 @@ const ChatRoom = ({ chatData, user, userProfile, onBack, openProfile, onNotice, 
         <div ref={bottomRef} />
       </div>
       {isBlocked ? (
-        <div className="p-4 bg-red-500/10 border-t border-red-500/30 text-center shrink-0"><p className="text-red-400 text-sm font-bold">Message limit reached (3). Wait for a reply to continue.</p></div>
+        <div className="p-4 bg-red-500/10 border-t border-red-500/30 text-center shrink-0"><p className="text-red-400 text-sm font-bold">Message limit reached (3). Wait for a reply.</p></div>
       ) : (
         <form onSubmit={send} className="p-3 bg-[#0c0c10] border-t border-white/10 flex gap-2 shrink-0">
           <Btn onClick={() => fileInputRef.current?.click()} className="bg-[#1a1a22] text-white w-11 h-11 rounded-full flex items-center justify-center border border-white/10 shrink-0">📷</Btn>
@@ -1232,6 +1157,7 @@ const playGiftSound = (url) => {
   try { const audio = new Audio(url); audio.volume = 0.5; audio.play().catch(() => {}); } catch {}
 };
 
+// ============ FIXED ROOM INTERFACE ============
 const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewProfile, demoMode = false, onUpdateLocalCoins, onUpdateLocalCharms, onDemoGiftReceived }) => {
   const [roomData, setRoomData] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -1244,28 +1170,45 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
   const [selectedGift, setSelectedGift] = useState(null);
   const [availableGifts, setAvailableGifts] = useState(DEFAULT_GIFTS);
   const [giftAnim, setGiftAnim] = useState(null);
+  const [giftNotifications, setGiftNotifications] = useState([]);
   const [showDailyTask, setShowDailyTask] = useState(false);
   const [announcementText, setAnnouncementText] = useState('Welcome to the voice room. Keep the vibe positive.');
   const [announcementDraft, setAnnouncementDraft] = useState('');
   const [newSongTitle, setNewSongTitle] = useState('');
   const [liveCoins, setLiveCoins] = useState(Number(userProfile.coins) || 0);
   const [toast, setToast] = useState(null);
-  const [joinedAt, setJoinedAt] = useState(Date.now());
+  const [sending, setSending] = useState(false);
+  const [sendingGift, setSendingGift] = useState(false);
+
   const lastGiftIdRef = useRef(null);
   const giftAnimTimerRef = useRef(null);
   const chatEndRef = useRef(null);
   const longPressTimer = useRef(null);
   const micStreamRef = useRef(null);
+  const lastRoomSigRef = useRef('');
+  const joinedAtRef = useRef(Date.now());
+  const onLeaveRef = useRef(onLeave);
+  const inputTextRef = useRef('');
+  const notifIdRef = useRef(0);
+
   const isAdmin = isOfficialDisplayId(userProfile?.displayId);
   const isOwner = user?.uid === roomData?.ownerId;
   const myMember = roomData?.activeMembers?.find((m) => m.uid === user?.uid);
   const isSeated = Boolean(myMember && myMember.seatIndex !== null && myMember.seatIndex !== undefined);
+
   const notify = (msg) => { setToast(msg); setTimeout(() => setToast((prev) => (prev === msg ? null : prev)), 2600); };
-  const onLeaveRef = useRef(onLeave);
+
+  const pushGiftNotif = (data) => {
+    notifIdRef.current += 1;
+    const id = `gn-${Date.now()}-${notifIdRef.current}`;
+    setGiftNotifications((prev) => [{ id, ...data }, ...prev].slice(0, 4));
+    setTimeout(() => { setGiftNotifications((prev) => prev.filter((n) => n.id !== id)); }, 5500);
+  };
+
   useEffect(() => { onLeaveRef.current = onLeave; }, [onLeave]);
   useEffect(() => { setLiveCoins(Number(userProfile.coins) || 0); }, [userProfile.coins]);
+  useEffect(() => { inputTextRef.current = inputText; }, [inputText]);
 
-  // Mic stream
   useEffect(() => {
     let active = true;
     if (navigator.mediaDevices?.getUserMedia) {
@@ -1284,11 +1227,23 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
   }, [isSeated, isMuted, roomData?.mutedUsers, user.uid]);
   useEffect(() => { document.querySelectorAll('audio').forEach((el) => { el.muted = isSpeakerMuted; }); }, [isSpeakerMuted]);
 
-  // Demo init / gifts settings
   useEffect(() => {
     if (demoMode) {
-      setRoomData({ id: roomId, title: "Zelda's chill lounge", tag: 'Chats', roomCode: '520188', ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL, activeMembers: [{ uid: 'u1', name: 'Rahul', img: '', seatIndex: 2, lastSeen: Date.now() }, { uid: 'u2', name: 'Sonia', img: '', seatIndex: 5, lastSeen: Date.now() }, { uid: user.uid, name: userProfile.displayName, img: userProfile.photoURL, seatIndex: null, lastSeen: Date.now() }], kicked: {}, blocked: [], mutedUsers: [] });
-      setMessages([{ id: 'sys-1', isSystem: true, text: 'Welcome to the voice room.' }, { id: 'msg-1', senderId: 'u1', senderName: 'Rahul', text: 'Hey everyone, grab a mic seat!' }, { id: 'msg-2', senderId: 'u2', senderName: 'Sonia', text: 'Sound check is live.' }]);
+      setRoomData({
+        id: roomId, title: "Zelda's chill lounge", tag: 'Chats', roomCode: '520188',
+        ownerId: user.uid, ownerName: userProfile.displayName, ownerImg: userProfile.photoURL,
+        activeMembers: [
+          { uid: 'u1', name: 'Rahul', img: '', seatIndex: 2, lastSeen: Date.now() },
+          { uid: 'u2', name: 'Sonia', img: '', seatIndex: 5, lastSeen: Date.now() },
+          { uid: user.uid, name: userProfile.displayName, img: userProfile.photoURL, seatIndex: null, lastSeen: Date.now() }
+        ],
+        kicked: {}, blocked: [], mutedUsers: []
+      });
+      setMessages([
+        { id: 'sys-1', isSystem: true, text: 'Welcome to the voice room.', createdAt: Date.now() - 60000 },
+        { id: 'msg-1', senderId: 'u1', senderName: 'Rahul', text: 'Hey everyone, grab a mic seat!', createdAt: Date.now() - 30000 },
+        { id: 'msg-2', senderId: 'u2', senderName: 'Sonia', text: 'Sound check is live.', createdAt: Date.now() - 20000 }
+      ]);
       return;
     }
     const unsubGifts = db.collection('settings').doc('gifts').onSnapshot((doc) => {
@@ -1299,12 +1254,11 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
     return () => { unsubGifts(); unsubMyCoins(); };
   }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]);
 
-  // Join room
   useEffect(() => {
     if (demoMode) return;
     const roomRef = rDoc(roomId);
     let joined = false, active = true;
-    setJoinedAt(Date.now());
+    joinedAtRef.current = Date.now();
     (async () => {
       try {
         const doc = await roomRef.get();
@@ -1320,24 +1274,45 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
         joined = true;
       } catch (err) { console.error('Error joining room:', err); }
     })();
+
     const unsubRoom = roomRef.onSnapshot((doc) => {
       if (!doc.exists) { onLeaveRef.current(); return; }
       const data = { id: doc.id, ...doc.data() };
       if (data.blocked && data.blocked.includes(user.uid)) { onLeaveRef.current(); return; }
+      const sig = JSON.stringify({
+        m: (data.activeMembers || []).map((x) => `${x.uid}:${x.seatIndex}:${x.name}`).join('|'),
+        a: data.announcement || '', s: data.currentSong || '',
+        mu: data.mutedUsers || [], o: data.ownerId || '',
+      });
+      const giftChanged = data.latestGift && data.latestGift.animId !== lastGiftIdRef.current;
+      if (sig === lastRoomSigRef.current && !giftChanged) return;
+      lastRoomSigRef.current = sig;
       setRoomData(data);
       if (data.announcement) setAnnouncementText(data.announcement);
-      // Global Gift Animation
-      if (data.latestGift && data.latestGift.animId !== lastGiftIdRef.current) {
+      if (giftChanged) {
         lastGiftIdRef.current = data.latestGift.animId;
-        setGiftAnim(data.latestGift);
-        playGiftSound(data.latestGift.sound);
+        const g = data.latestGift;
+        setGiftAnim(g);
+        playGiftSound(g.sound);
+        pushGiftNotif({
+          giftName: g.giftName || g.n || 'Gift',
+          giftIcon: g.giftIcon || g.i || '🎁',
+          giftType: g.giftType || g.type || 'emoji',
+          senderName: g.senderName || 'Someone',
+          receiverName: g.receiverName || 'User',
+          charms: Number(g.charms) || 0,
+          coins: Number(g.coins) || 0,
+        });
         if (giftAnimTimerRef.current) clearTimeout(giftAnimTimerRef.current);
         giftAnimTimerRef.current = setTimeout(() => setGiftAnim(null), 3500);
       }
     });
-    const unsubMsg = roomRef.collection('messages').orderBy('createdAt', 'asc').onSnapshot((snap) => {
-      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+
+    const unsubMsg = roomRef.collection('messages').orderBy('createdAt', 'asc').onSnapshot(
+      (snap) => { setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); },
+      (err) => console.warn('messages subscription:', err)
+    );
+
     return () => {
       active = false; unsubRoom(); unsubMsg();
       if (giftAnimTimerRef.current) clearTimeout(giftAnimTimerRef.current);
@@ -1355,7 +1330,6 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
     };
   }, [demoMode, roomId, user.uid, userProfile.displayName, userProfile.photoURL]);
 
-  // ============ HEARTBEAT & STALE CLEANUP (BUG FIX: offline auto-leave) ============
   useEffect(() => {
     if (demoMode) return;
     const hb = setInterval(() => {
@@ -1369,7 +1343,7 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
         const updated = members.map((m) => (m.uid === user.uid ? { ...m, lastSeen: Date.now() } : m));
         tx.update(ref, { activeMembers: updated });
       }).catch(() => {});
-    }, 20000);
+    }, 25000);
     const cleanup = setInterval(() => {
       db.runTransaction(async (tx) => {
         const ref = rDoc(roomId);
@@ -1378,7 +1352,7 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
         const data = doc.data();
         const now = Date.now();
         const members = data.activeMembers || [];
-        const staleUids = members.filter((m) => m.uid !== user.uid && (now - (m.lastSeen || 0)) >= 70000).map((m) => m.uid);
+        const staleUids = members.filter((m) => m.uid !== user.uid && (now - (m.lastSeen || 0)) >= 90000).map((m) => m.uid);
         if (staleUids.length === 0) return;
         let current = members;
         let ownerUid = data.ownerId, ownerName = data.ownerName, ownerImg = data.ownerImg;
@@ -1390,11 +1364,10 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
         }
         tx.update(ref, { activeMembers: current, ownerId: ownerUid, ownerName, ownerImg });
       }).catch(() => {});
-    }, 30000);
+    }, 40000);
     return () => { clearInterval(hb); clearInterval(cleanup); };
   }, [roomId, user.uid, demoMode]);
 
-  // Page close handler (best effort)
   useEffect(() => {
     if (demoMode) return;
     const handler = () => {
@@ -1415,10 +1388,29 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages]);
 
+  const seatedUsers = useMemo(() => {
+    const arr = Array(10).fill(null);
+    (roomData?.activeMembers || []).forEach((m) => {
+      if (m.seatIndex !== null && m.seatIndex !== undefined && m.seatIndex >= 0 && m.seatIndex < 10) arr[m.seatIndex] = m;
+    });
+    return arr;
+  }, [roomData?.activeMembers]);
+
+  const visibleMessages = useMemo(() => {
+    if (demoMode) return messages;
+    const cutoff = joinedAtRef.current - 5000;
+    return messages.filter((msg) => {
+      if (!msg.createdAt) return true;
+      const ms = toTimestampMillis(msg.createdAt);
+      return ms === null || ms >= cutoff;
+    });
+  }, [messages, demoMode]);
+
   const pushSystemLocal = async (text) => {
-    if (demoMode) { setMessages((prev) => [...prev, { id: `sys-${Date.now()}-${Math.random()}`, isSystem: true, text }]); return; }
+    if (demoMode) { setMessages((prev) => [...prev, { id: `sys-${Date.now()}-${Math.random()}`, isSystem: true, text, createdAt: Date.now() }]); return; }
     await rDoc(roomId).collection('messages').add({ text, isSystem: true, createdAt: FV.serverTimestamp() });
   };
+
   const handleSeatClick = async (seatIndex, seatedUser) => {
     if (!roomData) return;
     if (seatedUser) { setSelectedUser(seatedUser); setSheet('profile'); return; }
@@ -1465,60 +1457,80 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
   const handlePressStart = (name) => { longPressTimer.current = setTimeout(() => setInputText((prev) => `${prev}@${name} `), 600); };
   const handlePressEnd = () => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } };
   const handleMicClick = () => { if (!isSeated) { notify('Take a mic seat first!'); return; } setIsMuted((m) => !m); };
+
   const sendMsg = async (customText) => {
-    const payload = (customText ?? inputText).trim();
-    if (!payload) return;
+    const payload = String(customText ?? inputTextRef.current ?? '').trim();
+    if (!payload || sending) return;
     if (!customText) setInputText('');
-    if (demoMode) { setMessages((prev) => [...prev, { id: `msg-${Date.now()}-${Math.random()}`, text: payload, senderId: user.uid, senderName: userProfile.displayName }]); return; }
-    await rDoc(roomId).collection('messages').add({ text: payload, senderId: user.uid, senderName: userProfile.displayName, createdAt: FV.serverTimestamp() });
+    const displayName = userProfile.displayName || 'User';
+    if (demoMode) { setMessages((prev) => [...prev, { id: `msg-${Date.now()}-${Math.random()}`, text: payload, senderId: user.uid, senderName: displayName, createdAt: Date.now() }]); return; }
+    setSending(true);
+    try {
+      await rDoc(roomId).collection('messages').add({ text: payload, senderId: user.uid, senderName: displayName, createdAt: FV.serverTimestamp() });
+    } catch (err) {
+      console.error('sendMsg error:', err);
+      notify(`Send failed: ${errMsg(err)}`);
+      if (!customText) setInputText(payload);
+    } finally { setSending(false); }
   };
+
   const openGiftSheet = (target) => {
     if (target) setGiftTargetUser(target);
     else if (!giftTargetUser && roomData?.activeMembers?.length) setGiftTargetUser(roomData.activeMembers.find((m) => m.uid !== user.uid) || roomData.activeMembers[0]);
     setSheet('gift');
   };
+
   const sendGift = async (giftToSend) => {
     const gift = giftToSend || selectedGift;
     const target = giftTargetUser || roomData?.activeMembers?.find((m) => m.uid !== user.uid) || roomData?.activeMembers?.[0] || null;
     if (!gift) return notify('Select a gift!');
     if (!target) return notify('Select a user!');
+    if (sendingGift) return;
     if (!isAdmin && liveCoins < gift.p) return notify('Not enough coins.');
+    setSendingGift(true);
     try {
       const isSelfGift = target.uid === user.uid;
       const { charmsEarned, coinsEarned } = calculateGiftRewards(gift.p);
       const giftRecord = { giftId: gift.id || 'custom', giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji' };
-      const targetRef = uDoc(target.uid);
+      const senderName = userProfile.displayName || 'Someone';
+      const receiverName = target.name || 'User';
+
       if (demoMode) {
         if (!isAdmin) { const nextCoins = Math.max(0, liveCoins - gift.p); setLiveCoins(nextCoins); onUpdateLocalCoins?.(nextCoins); }
-        onDemoGiftReceived?.(target.uid, { id: `dg-${Date.now()}`, ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: Date.now() });
+        onDemoGiftReceived?.(target.uid, { id: `dg-${Date.now()}`, ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName, senderImg: userProfile.photoURL || '', createdAt: Date.now() });
         setGiftAnim(gift);
         playGiftSound(gift.sound);
+        pushGiftNotif({ giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji', senderName, receiverName, charms: charmsEarned, coins: coinsEarned });
         if (giftAnimTimerRef.current) clearTimeout(giftAnimTimerRef.current);
         giftAnimTimerRef.current = setTimeout(() => setGiftAnim(null), 3500);
       } else {
+        const targetRef = uDoc(target.uid);
         if (!isAdmin) await uDoc(user.uid).update({ coins: FV.increment(-gift.p) });
-        await targetRef.collection('receivedGifts').add({ ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName: userProfile.displayName, senderImg: userProfile.photoURL || '', createdAt: FV.serverTimestamp() });
+        await targetRef.collection('receivedGifts').add({ ...giftRecord, count: 1, charms: charmsEarned, senderUid: user.uid, senderName, senderImg: userProfile.photoURL || '', createdAt: FV.serverTimestamp() });
         await targetRef.update({ charms: FV.increment(charmsEarned), coins: FV.increment(coinsEarned) });
-        // Global gift animation — include BOTH field naming schemes for backward compat
+        const animId = Date.now();
         await rDoc(roomId).update({
           latestGift: {
-            animId: Date.now(),
-            n: gift.n, i: gift.i, type: gift.type || 'emoji',
+            animId, n: gift.n, i: gift.i, type: gift.type || 'emoji',
             giftName: gift.n, giftIcon: gift.i, giftType: gift.type || 'emoji',
             anim: gift.anim || 'float', sound: gift.sound || '',
-            senderName: userProfile.displayName
+            senderName, receiverName,
+            charms: charmsEarned, coins: coinsEarned,
+            senderUid: user.uid, receiverUid: target.uid,
           }
         });
       }
-      await pushSystemLocal(`${userProfile.displayName} sent ${gift.n} to ${isSelfGift ? 'themselves' : target.name}. Receiver got ${charmsEarned} Charms and ${coinsEarned} Coins!`);
+      await pushSystemLocal(`${senderName} sent ${gift.n} to ${isSelfGift ? 'themselves' : receiverName}. +${charmsEarned}✨ +${coinsEarned}🪙`);
       setSheet(null);
       setSelectedGift(null);
-    } catch (error) { notify(`Error: ${errMsg(error)}`); }
+    } catch (error) {
+      console.error('sendGift error:', error);
+      notify(`Gift failed: ${errMsg(error)}`);
+    } finally { setSendingGift(false); }
   };
 
   if (!roomData) return <div className="room flex items-center justify-center text-white font-bold">Joining Room...</div>;
-  const seatedUsers = Array(10).fill(null);
-  roomData.activeMembers?.forEach((m) => { if (m.seatIndex !== null && m.seatIndex !== undefined && m.seatIndex >= 0 && m.seatIndex < 10) seatedUsers[m.seatIndex] = m; });
+
   const renderSeat = (index, label) => {
     const seatedUser = seatedUsers[index];
     const isMine = Boolean(seatedUser && seatedUser.uid === user.uid);
@@ -1528,7 +1540,6 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
     return <MicSeat key={index} seatIndex={index} label={label} seatedUser={seatedUser} isMine={isMine} isOwnerSeat={isOwnerSeat} isLive={isLive} isMutedInRoom={isMutedInRoom} onTake={() => handleSeatClick(index, seatedUser)} onLongPressStart={() => seatedUser && handlePressStart(seatedUser.name)} onLongPressEnd={handlePressEnd} />;
   };
   const joinFirstEmptySeat = () => { const emptyIdx = seatedUsers.findIndex((s) => s === null); if (emptyIdx === -1) { notify('All mic seats occupied.'); return; } handleSeatClick(emptyIdx, null); };
-  const visibleMessages = messages.filter((msg) => { if (demoMode) return true; if (!msg.createdAt) return true; const ms = toTimestampMillis(msg.createdAt); return ms !== null && ms >= joinedAt; });
 
   return (
     <main className="room" data-testid="voice-room">
@@ -1538,6 +1549,26 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
         <div className="tools"><Btn className="count-pill" onClick={() => setSheet(sheet === 'members' ? null : 'members')}><span>👤</span><span>{roomData.activeMembers?.length || 1}</span></Btn></div>
       </header>
       {toast && <div className="mx-3 mb-1 px-3 py-2 rounded-xl bg-[#2a2a32] border border-white/15 text-xs font-bold text-white text-center z-40">{toast}</div>}
+
+      {/* GIFT NOTIFICATION CARDS — LEFT SIDE */}
+      <div className="fixed left-2 top-20 z-[9997] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '230px' }}>
+        {giftNotifications.map((n) => (
+          <div key={n.id} className="gift-notification-card">
+            <div className="gift-notification-icon">
+              {n.giftType === 'image' ? <img src={n.giftIcon} alt={n.giftName} className="w-7 h-7 object-contain" /> : n.giftType === 'video' ? <video src={n.giftIcon} className="w-7 h-7 object-contain" autoPlay loop muted playsInline /> : <span className="text-2xl">{n.giftIcon}</span>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-extrabold text-white truncate leading-tight">{n.giftName}</p>
+              <p className="text-[9px] text-slate-300 truncate leading-tight">{n.senderName} → {n.receiverName}</p>
+              <p className="text-[10px] font-bold leading-tight mt-0.5">
+                <span className="text-amber-400">+{n.charms}✨</span>
+                <span className="text-yellow-400 ml-1">+{n.coins}🪙</span>
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="stage">
         <div className="board">
           <div className="seat-row">{renderSeat(0, 'Host Seat')}<PulseWave />{renderSeat(1, 'Co-Host Seat')}</div>
@@ -1584,8 +1615,8 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
                     </Btn>
                   ))}
                 </div>
-                <Btn disabled={!selectedGift} onClick={() => selectedGift && sendGift(selectedGift)} className="w-full mt-3 bg-[#ff4d9a] disabled:bg-[#2a2a32] disabled:text-slate-400 text-white py-3 rounded-xl font-extrabold text-sm min-h-[44px]">
-                  {selectedGift ? `Send Gift · ${selectedGift.n} to ${giftTargetUser?.uid === user.uid ? 'Yourself' : giftTargetUser?.name || 'Member'}` : 'Select a Gift'}
+                <Btn disabled={!selectedGift || sendingGift} onClick={() => selectedGift && sendGift(selectedGift)} className="w-full mt-3 bg-[#ff4d9a] disabled:bg-[#2a2a32] disabled:text-slate-400 text-white py-3 rounded-xl font-extrabold text-sm min-h-[44px]">
+                  {sendingGift ? 'Sending...' : selectedGift ? `Send ${selectedGift.n} to ${giftTargetUser?.uid === user.uid ? 'Yourself' : giftTargetUser?.name || 'Member'}` : 'Select a Gift'}
                 </Btn>
               </section>
             )}
@@ -1688,7 +1719,7 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
       <form className="dock" onSubmit={(e) => { e.preventDefault(); sendMsg(); }}>
         <Btn className="dock-btn" onClick={() => { setIsSpeakerMuted((prev) => !prev); notify(isSpeakerMuted ? 'Speaker enabled' : 'Speaker muted'); }}><SpeakerIcon muted={isSpeakerMuted} /></Btn>
         <Btn className="dock-btn" onClick={handleMicClick}><MicIcon muted={isMuted || !isSeated} /></Btn>
-        <input className="dock-input" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputText.startsWith('@') ? 'Mentioning...' : 'Type...'} />
+        <input className="dock-input" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={sending ? 'Sending...' : 'Type...'} disabled={sending} />
         <Btn className="dock-btn" onClick={() => setSheet(sheet === 'emoji' ? null : 'emoji')}><SmileIcon /></Btn>
         <Btn className="dock-btn" onClick={() => (sheet === 'gift' ? setSheet(null) : openGiftSheet())}><GiftIcon /></Btn>
         <Btn className="dock-btn" onClick={() => setSheet(sheet === 'more' ? null : 'more')}><MoreIcon /></Btn>
@@ -1696,13 +1727,13 @@ const RoomInterface = ({ roomId, user, userProfile, onMinimize, onLeave, onViewP
       {showDailyTask && (<DailyTaskModal onClose={() => setShowDailyTask(false)} onClaimCoins={async (amount) => { if (demoMode) { const next = liveCoins + amount; setLiveCoins(next); onUpdateLocalCoins?.(next); return; } await uDoc(user.uid).update({ coins: FV.increment(amount) }); }} />)}
       {giftAnim && (
         <div className="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-center">
-          <div className={`gift-anim-${giftAnim.anim || 'float'} flex items-center justify-center gift-anim-media`} style={{ fontSize: '80px' }}>
+          <div className={`gift-anim-${giftAnim.anim || 'float'} flex items-center justify-center gift-anim-media`}>
             {(() => {
               const type = giftAnim.type || giftAnim.giftType || 'emoji';
               const src = giftAnim.i || giftAnim.giftIcon;
-              if (type === 'image') return <img src={src} alt="" className="w-32 h-32 object-contain" />;
-              if (type === 'video') return <video src={src} autoPlay loop muted playsInline className="w-32 h-32 object-contain" />;
-              return src;
+              if (type === 'image') return <img src={src} alt="" />;
+              if (type === 'video') return <video src={src} autoPlay loop muted playsInline />;
+              return <span>{src}</span>;
             })()}
           </div>
         </div>
@@ -1750,7 +1781,6 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
   const activeTitles = getActiveTitles(userProfile?.titles);
   const showComingSoon = (label) => onNotice(`🚧 ${label} Coming Soon!`);
 
-  // ============ VISITOR FIX: remove orderBy (composite index issue) + dedupe by visitor ============
   useEffect(() => {
     if (!user || demoMode) return;
     const unsub = db.collection('profileViews').where('visitedUid', '==', user.uid).limit(100).onSnapshot((snap) => {
@@ -1828,20 +1858,9 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             <Btn onClick={() => setSubView('edit')} className="absolute top-11 left-5 right-4 flex items-center gap-4 text-left z-10">
               <div className="w-20 h-20 rounded-2xl border-2 border-gray-600 shadow-lg overflow-hidden bg-gray-800 card-shadow shrink-0"><UserAvatar src={userProfile.photoURL} name={userProfile.displayName} className="w-full h-full object-cover" /></div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-extrabold text-white flex items-center gap-1.5 flex-wrap leading-tight">
-                  <span className="truncate max-w-[165px]">{userProfile.displayName}</span>
-                  <span className="text-xl">{getGenderEmoji(gender)}</span>
-                  {isSuperAdmin && <span className="star-official-badge text-[10px] px-2 py-0.5 rounded">⭐ Official</span>}
-                </h1>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-xs font-bold text-gray-300 tabular-nums">Lv.{userProfile.level || 1}</span>
-                  <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-orange-500 w-1/3" /></div>
-                  <span className="text-[11px] font-bold text-yellow-400 tabular-nums">{isSuperAdmin ? '∞' : userProfile.coins || 0} 🪙</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1 text-xs text-gray-300">
-                  <span>{country.flag} {country.name}</span>
-                  {!isSuperAdmin && <span className="text-amber-300 flex items-center gap-1 tabular-nums">· <CharmIcon charms={userProfile.charms} size="text-xs" /> {userProfile.charms || 0}</span>}
-                </div>
+                <h1 className="text-2xl font-extrabold text-white flex items-center gap-1.5 flex-wrap leading-tight"><span className="truncate max-w-[165px]">{userProfile.displayName}</span><span className="text-xl">{getGenderEmoji(gender)}</span>{isSuperAdmin && <span className="star-official-badge text-[10px] px-2 py-0.5 rounded">⭐ Official</span>}</h1>
+                <div className="flex items-center gap-2 mt-1.5"><span className="text-xs font-bold text-gray-300 tabular-nums">Lv.{userProfile.level || 1}</span><div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-orange-500 w-1/3" /></div><span className="text-[11px] font-bold text-yellow-400 tabular-nums">{isSuperAdmin ? '∞' : userProfile.coins || 0} 🪙</span></div>
+                <div className="flex items-center gap-2 mt-1 text-xs text-gray-300"><span>{country.flag} {country.name}</span>{!isSuperAdmin && <span className="text-amber-300 flex items-center gap-1 tabular-nums">· <CharmIcon charms={userProfile.charms} size="text-xs" /> {userProfile.charms || 0}</span>}</div>
                 {activeTitles.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{activeTitles.map((t) => <TitleBadge key={t.id} title={t} />)}</div>}
               </div>
               <span className="text-gray-400 text-2xl font-bold pr-1 shrink-0">›</span>
@@ -1858,10 +1877,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
             <MenuItem icon="📊" title="Stats" onClick={() => showComingSoon('Stats')} />
             <Btn onClick={handleVisitorClick} className={C_ROW_B}>
               <div className="flex items-center gap-4"><span className="text-xl text-gray-400">👁️</span><span className="text-[15px] text-gray-200">Visitors</span></div>
-              <div className="flex items-center gap-2">
-                {isVisitorUnlocked ? <span className="text-sm text-green-400 font-semibold">Recent ({recentCount})</span> : <span className="text-sm text-orange-400 font-semibold animate-pulse">Total ({totalCount})</span>}
-                <span className="text-gray-600 text-lg">›</span>
-              </div>
+              <div className="flex items-center gap-2">{isVisitorUnlocked ? <span className="text-sm text-green-400 font-semibold">Recent ({recentCount})</span> : <span className="text-sm text-orange-400 font-semibold animate-pulse">Total ({totalCount})</span>}<span className="text-gray-600 text-lg">›</span></div>
             </Btn>
             <MenuItem icon="👤" title="Invite Friends" onClick={() => showComingSoon('Invite Friends')} />
             <MenuItem icon="⭐" title="Badge" onClick={() => showComingSoon('Badge')} />
@@ -1956,10 +1972,7 @@ const ProfileTab = ({ user, userProfile, setUserProfile, setView, onNotice, demo
           <div className="flex flex-col gap-3">
             {visitors.length === 0 ? <p className="text-center text-gray-400 py-4 text-sm">No visitors yet.</p> : visitors.map((v) => (
               <div key={v.id} className="flex items-center justify-between p-3 bg-[#0b1120] rounded-xl border border-gray-800">
-                <div className="flex items-center gap-3">
-                  <UserAvatar src={v.visitorImg} name={v.visitorName} className="w-12 h-12 rounded-full border border-gray-700" />
-                  <div><p className="font-bold text-[15px] text-white">{v.visitorName}</p><p className="text-xs text-gray-500">{toTimestampMillis(v.timestamp) ? new Date(toTimestampMillis(v.timestamp)).toLocaleString() : 'Just now'}</p></div>
-                </div>
+                <div className="flex items-center gap-3"><UserAvatar src={v.visitorImg} name={v.visitorName} className="w-12 h-12 rounded-full border border-gray-700" /><div><p className="font-bold text-[15px] text-white">{v.visitorName}</p><p className="text-xs text-gray-500">{toTimestampMillis(v.timestamp) ? new Date(toTimestampMillis(v.timestamp)).toLocaleString() : 'Just now'}</p></div></div>
                 <Btn onClick={() => onNotice(`Viewing ${v.visitorName}'s profile coming soon!`)} className="bg-pink-500/10 text-pink-400 px-4 py-1.5 rounded-full font-bold text-xs border border-pink-500/20 min-h-[36px]">View</Btn>
               </div>
             ))}
@@ -2068,7 +2081,6 @@ const UserProfileView = ({ targetUser, currentUser, currentProfile, onBack, setC
     return () => { unsubUser(); unsubGifts(); };
   }, [demoMode, demoReceivedGifts, demoUsersMap, targetUser]);
 
-  // ============ VISITOR RECORDING: fixed with 1h cooldown ============
   useEffect(() => {
     if (demoMode || isMe || !currentUser?.uid || !targetUser?.uid || targetUser.uid === currentUser.uid) return;
     try {
@@ -2174,11 +2186,7 @@ const UserProfileView = ({ targetUser, currentUser, currentProfile, onBack, setC
             <span className="font-semibold tabular-nums">ID: {user.displayId}</span>
             <Btn onClick={() => { navigator.clipboard?.writeText(user.displayId); onNotice('ID Copied!'); }} className="hover:text-[#1a1a2e] font-bold" aria-label="Copy ID">📋</Btn>
           </div>
-          {activeTitles.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {activeTitles.map((t) => <TitleBadge key={t.id} title={t} size="md" />)}
-            </div>
-          )}
+          {activeTitles.length > 0 && (<div className="flex flex-wrap gap-1.5 mb-4">{activeTitles.map((t) => <TitleBadge key={t.id} title={t} size="md" />)}</div>)}
           <div className="mb-4 bg-[#f8f9fa] border border-slate-200 rounded-2xl p-4">
             <h3 className="font-bold text-sm text-[#1a1a2e] mb-1">Bio</h3>
             <p className="text-slate-600 text-sm leading-relaxed">{user.bio || 'This user is mysterious.'}</p>
@@ -2189,27 +2197,16 @@ const UserProfileView = ({ targetUser, currentUser, currentProfile, onBack, setC
           </div>
           <Btn onClick={() => setShowGiftWallModal(true)} className="w-full bg-[#f8f9fa] hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 mb-4 text-left">
             <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className="w-9 h-9 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-xl">🎁</span><div><h3 className="font-extrabold text-base text-[#1a1a2e] leading-tight">Gift Wall</h3><p className="text-xs text-slate-500">Tap to view received gifts</p></div></div><span className="text-slate-400 text-xl font-bold">›</span></div>
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-              <div><p className="text-[11px] font-semibold text-slate-500">Total Charms</p><p className="text-lg font-extrabold text-amber-600 tabular-nums">✨ {displayTotalCharms}</p></div>
-              <div><p className="text-[11px] font-semibold text-slate-500">Total Gifts</p><p className="text-lg font-extrabold text-[#1a1a2e] tabular-nums">🎁 {totalGiftsCount}</p></div>
-            </div>
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200"><div><p className="text-[11px] font-semibold text-slate-500">Total Charms</p><p className="text-lg font-extrabold text-amber-600 tabular-nums">✨ {displayTotalCharms}</p></div><div><p className="text-[11px] font-semibold text-slate-500">Total Gifts</p><p className="text-lg font-extrabold text-[#1a1a2e] tabular-nums">🎁 {totalGiftsCount}</p></div></div>
           </Btn>
           <div className="bg-[#f8f9fa] border border-slate-200 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div><h3 className="font-extrabold text-base text-[#1a1a2e]">🛡️ Guard List</h3><p className="text-xs text-slate-500">1 Charm received = 1 Guard Point</p></div>
-              <Btn onClick={() => setShowAllGuardsModal(true)} className="text-xs font-bold text-[#ff4d9a] px-2 py-1 min-h-[36px]">View All ›</Btn>
-            </div>
+            <div className="flex items-center justify-between mb-3"><div><h3 className="font-extrabold text-base text-[#1a1a2e]">🛡️ Guard List</h3><p className="text-xs text-slate-500">1 Charm received = 1 Guard Point</p></div><Btn onClick={() => setShowAllGuardsModal(true)} className="text-xs font-bold text-[#ff4d9a] px-2 py-1 min-h-[36px]">View All ›</Btn></div>
             {guardList.length === 0 ? <p className="text-xs text-slate-500 py-3 text-center">No guards yet.</p> : (
               <div className="space-y-2.5">
                 {guardList.slice(0, 3).map((guard, index) => {
                   const rankBadge = index === 0 ? '👑' : index === 1 ? '🥈' : '🥉';
                   const rankStyle = index === 0 ? 'bg-amber-50 border-amber-300 text-amber-900' : index === 1 ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-orange-50 border-orange-200 text-orange-900';
-                  return (
-                    <Btn key={guard.uid} onClick={() => openSenderProfile(guard)} className={`w-full flex items-center justify-between p-3 rounded-xl border text-left ${rankStyle}`}>
-                      <div className="flex items-center gap-3 min-w-0"><span className="text-xl w-6 text-center shrink-0">{rankBadge}</span><UserAvatar src={guard.img} name={guard.name} className="w-10 h-10 rounded-full border border-white shadow-sm shrink-0" /><div className="min-w-0"><p className="font-bold text-sm truncate">{guard.name}</p><p className="text-[11px] opacity-75">Rank #{index + 1}</p></div></div>
-                      <span className="text-xs font-extrabold tabular-nums shrink-0 ml-2">{guard.guardPoints} pts</span>
-                    </Btn>
-                  );
+                  return (<Btn key={guard.uid} onClick={() => openSenderProfile(guard)} className={`w-full flex items-center justify-between p-3 rounded-xl border text-left ${rankStyle}`}><div className="flex items-center gap-3 min-w-0"><span className="text-xl w-6 text-center shrink-0">{rankBadge}</span><UserAvatar src={guard.img} name={guard.name} className="w-10 h-10 rounded-full border border-white shadow-sm shrink-0" /><div className="min-w-0"><p className="font-bold text-sm truncate">{guard.name}</p><p className="text-[11px] opacity-75">Rank #{index + 1}</p></div></div><span className="text-xs font-extrabold tabular-nums shrink-0 ml-2">{guard.guardPoints} pts</span></Btn>);
                 })}
               </div>
             )}
@@ -2237,10 +2234,7 @@ const UserProfileView = ({ targetUser, currentUser, currentProfile, onBack, setC
               {groupedGifts.map((group) => (
                 <div key={group.key} className="bg-[#f8f9fa] border border-slate-200 rounded-2xl p-3 flex flex-col justify-between gap-2">
                   <div className="flex items-center gap-2.5"><span className="text-2xl shrink-0">{group.giftType === 'image' ? <img src={group.giftIcon} alt={group.giftName} className="w-8 h-8 object-contain" /> : group.giftIcon}</span><div className="min-w-0"><p className="font-extrabold text-sm text-[#1a1a2e] truncate">{group.giftName} × {group.totalCount}</p><p className="text-[11px] font-semibold text-amber-600 tabular-nums">+{group.totalCharms} Charms</p></div></div>
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200 overflow-x-auto no-scrollbar">
-                    <span className="text-[10px] font-semibold text-slate-500 shrink-0">From:</span>
-                    {group.senders.map((sender) => (<Btn key={sender.uid} onClick={() => openSenderProfile(sender)} className="relative shrink-0 rounded-full"><UserAvatar src={sender.img} name={sender.name} className="w-7 h-7 rounded-full border border-slate-300" /></Btn>))}
-                  </div>
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200 overflow-x-auto no-scrollbar"><span className="text-[10px] font-semibold text-slate-500 shrink-0">From:</span>{group.senders.map((sender) => (<Btn key={sender.uid} onClick={() => openSenderProfile(sender)} className="relative shrink-0 rounded-full"><UserAvatar src={sender.img} name={sender.name} className="w-7 h-7 rounded-full border border-slate-300" /></Btn>))}</div>
                 </div>
               ))}
             </div>
@@ -2279,10 +2273,7 @@ const UserProfileView = ({ targetUser, currentUser, currentProfile, onBack, setC
                   ) : !user.isAdmin ? (
                     <div className="space-y-3"><div className="flex flex-col gap-1.5 text-sm"><label className="flex items-center gap-2"><input type="checkbox" id="p_charm" defaultChecked /> Manage Charms</label><label className="flex items-center gap-2"><input type="checkbox" id="p_coins" defaultChecked /> Send Coins</label><label className="flex items-center gap-2"><input type="checkbox" id="p_ban" defaultChecked /> Ban Users</label><label className="flex items-center gap-2"><input type="checkbox" id="p_admin" /> Manage Admins</label></div><Btn onClick={handleMakeAdmin} className="w-full bg-[var(--color-rose)] text-white py-2 rounded-lg font-bold text-sm mt-2">Grant Admin</Btn></div>
                   ) : null}
-                  <div className="border-t border-white/10 mt-3 pt-3">
-                    <h4 className="font-bold text-sm mb-2">🎭 Admin Badge</h4>
-                    <Btn onClick={toggleAdminBadge} className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold text-sm">{user.showAdminBadge === false ? '👁️ Show Badge' : '🙈 Hide Badge'}</Btn>
-                  </div>
+                  <div className="border-t border-white/10 mt-3 pt-3"><h4 className="font-bold text-sm mb-2">🎭 Admin Badge</h4><Btn onClick={toggleAdminBadge} className="w-full bg-purple-600 text-white py-2 rounded-lg font-bold text-sm">{user.showAdminBadge === false ? '👁️ Show Badge' : '🙈 Hide Badge'}</Btn></div>
                 </div>
               )}
             </div>
@@ -2360,13 +2351,9 @@ function WorldStarApp() {
           const doc = await docRef.get();
           const now = Date.now();
           if (!doc.exists) {
-            // ============ AUTO-ADD OFFICIAL FRIENDS (on user creation) ============
             const officialUids = [];
             for (const oid of OFFICIAL_DISPLAY_IDS) {
-              try {
-                const snap = await db.collection('users').where('displayId', '==', oid).limit(1).get();
-                if (!snap.empty && snap.docs[0].id !== u.uid) officialUids.push(snap.docs[0].id);
-              } catch {}
+              try { const snap = await db.collection('users').where('displayId', '==', oid).limit(1).get(); if (!snap.empty && snap.docs[0].id !== u.uid) officialUids.push(snap.docs[0].id); } catch {}
             }
             const newData = {
               displayName: u.displayName?.substring(0, 15) || 'User', photoURL: u.photoURL || '', bannerURL: '',
@@ -2382,7 +2369,6 @@ function WorldStarApp() {
             const data = doc.data();
             const patch = { isOnline: true, lastSeen: now };
             if (data.isBanned && data.banExpiresAt && now > data.banExpiresAt) { patch.isBanned = false; patch.banExpiresAt = null; data.isBanned = false; data.banExpiresAt = null; }
-            // ============ AUTO-SYNC OFFICIAL FRIENDS (existing users) ============
             try {
               const officialUids = [];
               for (const oid of OFFICIAL_DISPLAY_IDS) {
@@ -2392,7 +2378,6 @@ function WorldStarApp() {
               const missing = officialUids.filter((id) => !(data.friends || []).includes(id));
               if (missing.length > 0) { patch.friends = FV.arrayUnion(...missing); data.friends = [...(data.friends || []), ...missing]; }
             } catch {}
-            // Auto-clean expired titles
             const now2 = Date.now();
             const validTitles = (data.titles || []).filter((t) => !t.expiresAt || t.expiresAt > now2);
             if (validTitles.length !== (data.titles || []).length) { patch.titles = validTitles; data.titles = validTitles; }
