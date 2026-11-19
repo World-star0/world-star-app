@@ -67,7 +67,7 @@ body { display: flex; justify-content: center; }
 .gift-anim-explode { position: fixed; z-index: 9999; font-size: 80px; filter: drop-shadow(0 0 20px #ffd700); animation: giftExplode 3.5s ease-out forwards; left: 50%; top: 50%; }
 @keyframes giftSlide { 0% { right: -100px; top: 50%; opacity: 0; transform: translateY(-50%) scale(1); } 20% { right: 50%; opacity: 1; transform: translateY(-50%) translateX(50%) scale(1.5); } 80% { right: 50%; opacity: 1; transform: translateY(-50%) translateX(50%) scale(1.5); } 100% { right: 100%; opacity: 0; transform: translateY(-50%) scale(0.5); } }
 .gift-anim-slide { position: fixed; z-index: 9999; font-size: 80px; filter: drop-shadow(0 0 20px #ffd700); animation: giftSlide 3.5s ease-out forwards; }
-.gift-anim-media img, .gift-anim-media video { width: 150px; height: 150px; object-fit: contain; filter: drop-shadow(0 0 20px #ffd700); }
+.gift-anim-media img, .gift-anim-media video { width: 150px !important; height: 150px !important; object-fit: contain; filter: drop-shadow(0 0 20px #ffd700); }
 .cropper-container { direction: ltr; }
 .slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -76,3 +76,51 @@ body { display: flex; justify-content: center; }
 .glow-box { box-shadow: 0 0 20px rgba(236, 72, 153, 0.25); }
 .btn-glow { box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); }
 .card-shadow { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+
+/* ================================================
+   NEW: Title System & Admin Panel Styles
+   ================================================ */
+
+/* Title badge base — hover polish (styles are inline from JS getTitleStyleById) */
+.title-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-weight: 800;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  will-change: transform;
+  line-height: 1;
+  white-space: nowrap;
+}
+.title-badge:hover {
+  transform: scale(1.05);
+  filter: brightness(1.12);
+}
+
+/* Slow neon pulse — for the many glow variants, gives them life */
+@keyframes titlePulse {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.18) saturate(1.15); }
+}
+
+/* Custom slim scrollbar for admin panel title grid + template list */
+.overflow-y-auto::-webkit-scrollbar { width: 4px; }
+.overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
+.overflow-y-auto::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 4px; }
+.overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #555; }
+.overflow-y-auto { scrollbar-width: thin; scrollbar-color: #3a3a3a transparent; }
+
+/* Ensure Admin Dashboard title template grid rows don't clip on small screens */
+.admin-title-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* Titles preview box inside AdminDashboard Title Manager — glow backdrop */
+.title-preview-backdrop {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 77, 154, 0.15), transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(126, 231, 255, 0.15), transparent 60%),
+    rgba(0, 0, 0, 0.45);
+}
